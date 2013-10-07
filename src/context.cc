@@ -155,8 +155,6 @@ namespace pulse {
   Handle<Value>
   Context::Disconnect(const Arguments& args){
     HandleScope scope;
-
-    JS_ASSERT(args.Length() == 1);
     
     Context *ctx = ObjectWrap::Unwrap<Context>(args.This());
     

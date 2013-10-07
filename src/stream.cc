@@ -316,8 +316,6 @@ namespace pulse {
   Handle<Value>
   Stream::Disconnect(const Arguments& args){
     HandleScope scope;
-
-    JS_ASSERT(args.Length() == 1);
     
     Stream *stm = ObjectWrap::Unwrap<Stream>(args.This());
     
