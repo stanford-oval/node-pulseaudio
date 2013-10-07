@@ -1,6 +1,9 @@
 {
   'targets': [{
     'target_name': 'pulse',
+    'defines': [
+      'DIE_ON_EXCEPTION'
+    ],
     'sources': [
       'src/context.cc',
       'src/stream.cc',

@@ -20,14 +20,15 @@ namespace pulse {
     ctx->pa_state = pa_context_get_state(ctx->pa_ctx);
     
     if(!ctx->state_callback.IsEmpty()){
-      //HandleScope scope;
+      TryCatch try_catch;
       
-      Local<Value> args[] = {
+      Handle<Value> args[] = {
         Number::New(ctx->pa_state)
       };
+      
       ctx->state_callback->Call(ctx->handle_, 1, args);
       
-      //scope.Close(Undefined());
+      HANDLE_CAUGHT(try_catch);
     }
   }
   

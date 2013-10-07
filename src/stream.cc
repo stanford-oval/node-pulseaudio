@@ -28,10 +28,15 @@ namespace pulse {
     stm->pa_state = pa_stream_get_state(stm->pa_stm);
     
     if(!stm->state_callback.IsEmpty()){
+      TryCatch try_catch;
+      
       Handle<Value> args[] = {
         Number::New(stm->pa_state)
       };
+      
       stm->state_callback->Call(stm->handle_, 1, args);
+
+      HANDLE_CAUGHT(try_catch);
     }
   }
   
@@ -78,11 +83,15 @@ namespace pulse {
     
     Buffer *buffer = Buffer::New((const char*)data, size);
     
+    TryCatch try_catch;
+    
     Handle<Value> args[] = {
       buffer->handle_
     };
     
     read_callback->Call(handle_, 1, args);
+    
+    HANDLE_CAUGHT(try_catch);
   }
   
   void Stream::read(Handle<Value> callback){
@@ -121,6 +130,8 @@ namespace pulse {
     }
     
     if(!drain_callback.IsEmpty()){
+      TryCatch try_catch;
+      
       Handle<Value> args[1];
       
       if(status < 0){
@@ -137,6 +148,8 @@ namespace pulse {
       
       LOG("Stream::drain callback call");
       callback->Call(handle_, 1, args);
+
+      HANDLE_CAUGHT(try_catch);
     }
   }
   

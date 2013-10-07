@@ -27,15 +27,15 @@ namespace pulse {
 #define RET_ERROR(_type_, _msg_) return THROW_ERROR(_type_, _msg_)
 #define THROW_SCOPE(_type_, _msg_) return scope.Close(THROW_ERROR(_type_, _msg_))
 
-#if 1
+#ifdef DIE_ON_EXCEPTION
 #define HANDLE_CAUGHT(_try_)                    \
   if(_try_.HasCaught()){                        \
-    FatalException(try_catch);                  \
+    FatalException(_try_);                      \
   }
 #else
 #define HANDLE_CAUGHT(_try_)                    \
   if(_try_.HasCaught()){                        \
-    DisplayExceptionLine(try_catch);            \
+    DisplayExceptionLine(_try_);                \
   }
 #endif
 
