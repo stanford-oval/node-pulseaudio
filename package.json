@@ -1,0 +1,19 @@
+{
+  "name" : "pulse",
+  "version" : "0.0.1",
+  "description": "NodeJS PulseAudio client",
+  "author" : "Kayo Phoenix <kayo@illumium.org>",
+  "contributors": [],
+  "repository" : {
+    "type" : "git",
+    "url" : "git@bitbucket.org:kayo/node-pulse.git"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">= 0.9.0"
+  },
+  "main" : "./lib/pulse",
+  "scripts" : {
+    "install" : "node-gyp configure build"
+  }
+}
