@@ -4,6 +4,11 @@
 #include "common.hh"
 
 namespace pulse {
+  enum InfoType {
+    INFO_SOURCE_LIST,
+    INFO_SINK_LIST,
+  };
+  
   class Context: public ObjectWrap {
     friend class Stream;
   protected:
@@ -24,14 +29,19 @@ namespace pulse {
 
     static void EventCallback(pa_context *c, const char *name, pa_proplist *p, void *ud);
     
+    /* introspection */
+    void info(InfoType infotype, Handle<Function> callback);
   public:
     static pa_mainloop_api mainloop_api;
     
     static void Init(Handle<Object> target);
     
     static Handle<Value> New(const Arguments& args);
+    
     static Handle<Value> Connect(const Arguments& args);
     static Handle<Value> Disconnect(const Arguments& args);
+    
+    static Handle<Value> Info(const Arguments& args);
   };
 }
 
