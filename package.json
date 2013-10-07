@@ -1,12 +1,12 @@
 {
-  "name" : "pulse",
+  "name" : "pulseaudio",
   "version" : "0.0.1",
   "description": "NodeJS PulseAudio client",
   "author" : "Kayo Phoenix <kayo@illumium.org>",
   "contributors": [],
   "repository" : {
     "type" : "git",
-    "url" : "git@bitbucket.org:kayo/node-pulse.git"
+    "url" : "git@bitbucket.org:kayo/node-pulseaudio.git"
   },
   "dependencies": {},
   "engines": {

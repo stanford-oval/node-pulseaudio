@@ -10,14 +10,14 @@ Mainloop API consists of three things: I/O Event Polling, Deferred Calls and Tim
 
 Install module with npm:
 
-    npm install pulse
+    npm install pulseaudio
 
 # Usage
 
 Require and use:
 
-    var Pulse = require('pulse');
-    var context = Pulse();
+    var PulseAudio = require('pulseaudio');
+    var context = PulseAudio();
     context.on('connection', function(){
       var player = context.createPlaybackStream();
       player.on('connection', function(){
@@ -34,7 +34,7 @@ Require and use:
 
 Context is a base communication point for client.
 
-    var context = new Pulse({
+    var context = new PulseAudio({
       client: "my-awesome-app",           // optional client name ("node-pulse" by default)
       server: "my-preferred-server",      // optional server name
       flags: "noflags|noautospawn|nofail" // optional connection flags (see PulseAudio documentation)
