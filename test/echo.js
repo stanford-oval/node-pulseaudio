@@ -30,5 +30,6 @@ ctx.on('connection', function(){
   setTimeout(function(){
     rec.end();
     play.end();
+    ctx.end();
   }, 5000);
 });
