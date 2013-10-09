@@ -1,9 +1,9 @@
 # Overview
 
-[PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/) is an free cross-platform audio server. This addon may be usefull for creating PulseAudio clients on JS, which runs on NodeJS.
+[PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/) is an free cross-platform audio server. This addon may be usefull for creating **PulseAudio** clients on **JS**, which runs on **NodeJS**.
 You can retrieve source/sink info from server, create Record and Playback streams.
 
-This module provides [libuv](https://github.com/joyent/libuv)-based MainLoop API for PulseAudio Context, it means that client uses same thread, where V8 runs.
+This module provides [libuv](https://github.com/joyent/libuv)-based **MainLoop API** for **PulseAudio** Context, it means that client uses same thread, where **V8** runs.
 Mainloop API consists of three things: I/O Event Polling, Deferred Calls and Timers. Resolution of timers limited by milliseconds.
 
 # Installation
@@ -18,19 +18,15 @@ Require and use:
 
     var PulseAudio = require('pulseaudio');
     var context = PulseAudio();
-    context.on('connection', function(){
-      var player = context.createPlaybackStream();
-      player.on('connection', function(){
-        player.write(data);
-        player.on('drain', function(){
-          player.end();
-        });
-      });
+    var player = context.createPlaybackStream();
+    player.write(data);
+    player.on('drain', function(){
+      player.end();
     });
 
 ## High-Level API
 
-### TODO Context
+### Context
 
 Context is a base communication point for client.
 
@@ -40,37 +36,49 @@ Context is a base communication point for client.
       flags: "noflags|noautospawn|nofail" // optional connection flags (see PulseAudio documentation)
     });
 
-Before we can operating with context we must to wait until connection will be established.
+You can listen context state.
+
+    context.on('state', function(state){
+      // state == "connecting|authorizing|setting_name|ready|terminated"
+    });
+
+Before we can operating with context we may wait until connection will be established.
 
     context.on('connection', function(){
       // operations
       context.end();
     });
 
-We can retrieve sink/source lists from server.
+But usually it doesn't require, because any operations execute deferred.
+
+How we can retrieve `sink` / `source` lists from server.
 
     context.[sink|source](function(list){
       // list[0].name - name of first sink/source
     });
 
-### TODO Streams
+And open streams.
 
-Streams designed for sound i/o purpose.
+### Streams
 
-We can create record/playback streams after context connection established.
+Streams designed for sound i/o.
 
-    var stream = context.[record|playback]({
+We can create `record` / `playback` streams.
+
+    var stream = context.playback({
       stream: "my-awesome-stream",                         // optional stream name ("node-stream" by default)
       device: "my-preferred-device",                       // optional device name
-      format: "U8|S[16|24|32][LE|BE]|F32[BE|LE]|[A|U]LAW", // optional sample format ("S16LE" by default)
+      format: "U8|S(16|24|32)(LE|BE)|F32(BE|LE)|(A|U)LAW", // optional sample format ("S16LE" by default)
       rate: 8000|22050|44100|48000|96000|192000|N,         // optional sample rate (44100 by default)
-      channels: 1|2|N                                      // optional channels (2 by default)
+      channels: 1|2|N                                      // optional channels (2 (stereo) by default)
     });
+
+But really streams will be initialized after context connection established.
 
 You can monitor stream state.
 
     stream.on('state', function(state){
-      // status == "creating|ready|terminated"
+      // state == "creating|ready|terminated"
     });
 
 Before we can operating with stream we must wait until connection will be established.
@@ -79,7 +87,7 @@ Before we can operating with stream we must wait until connection will be establ
       //
     });
 
-We can write/read data to/from stream by using NodeJS Stream API.
+We can `write` / `read` data to / from stream by using **NodeJS** **Stream API**.
 
     stream.write(chunk);
     stream.on('data', function(chunk){
@@ -88,20 +96,22 @@ We can write/read data to/from stream by using NodeJS Stream API.
     recorder.pipe(player);
     // and many more
 
-In addition, we may pause/resume streams by calling stop/play methods.
+In addition, we may pause / resume streams by calling `stop` / `play` methods.
 
     stream.stop();
     stream.play();
 
 Stopping discards any unplayed samples from stream.
 
-Note that we don't need to use pause/resume methods.
+Of course, we can listen `stop` / `play` events and check `stopped` / `playing` properties.
+
+Note that we don't need to use `pause` / `resume` methods with sound streams.
 
 # Licensing
 
 This addon are available under GNU General Public License version 3.
 
-node-pulse — [PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/) integration addon for [NodeJS](http://nodejs.org/).
+node-pulseaudio — [PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/) integration addon for [NodeJS](http://nodejs.org/).
 Copyright © 2013  Kayo Phoenix <kayo@illumium.org>
 
 This program is free software: you can redistribute it and/or modify

@@ -8,7 +8,8 @@ ctx.on('state', function(state){
   console.log('context:', state);
 });
 
-ctx.on('connection', function(){
+//ctx.on('connection', function()
+{
   var opts = {
     channels:1,
     rate:8000,
@@ -32,4 +33,5 @@ ctx.on('connection', function(){
     play.end();
     ctx.end();
   }, 5000);
-});
+}
+//);
