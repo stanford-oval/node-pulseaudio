@@ -157,7 +157,7 @@ timeval_to_millisec(const struct timeval *tv){
   struct timeval dt;
   timersub(tv, &ct, &dt);
   
-  return dt.tv_sec * 1000 + dt.tv_usec / 1000000;
+  return dt.tv_sec * 1000 + dt.tv_usec / 1000;
 }
 
 static pa_time_event *
