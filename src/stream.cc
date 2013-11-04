@@ -10,7 +10,10 @@ namespace pulse {
                  String::Utf8Value *stream_name,
                  const pa_sample_spec *sample_spec): ctx(context) {
     ctx.Ref();
-    pa_stm = pa_stream_new(ctx.pa_ctx, stream_name ? **stream_name : "node-stream", sample_spec, NULL);
+    
+    pa_ss = *sample_spec;
+    
+    pa_stm = pa_stream_new(ctx.pa_ctx, stream_name ? **stream_name : "node-stream", &pa_ss, NULL);
     pa_stream_set_state_callback(pa_stm, StateCallback, this);
   }
   
@@ -122,14 +125,14 @@ namespace pulse {
   void Stream::DrainCallback(pa_stream *s, int st, void *ud){
     Stream *stm = static_cast<Stream*>(ud);
     
-    stm->drain(st);
+    stm->drain();
   }
 
-  void Stream::drain(int status){
-    LOG("Stream::drain callback");
-    
+  void Stream::drain(){
+    LOG("Stream::drain");
+
     if(!write_buffer.IsEmpty()){
-      LOG("Stream::drain buffer del");
+      //LOG("Stream::drain buffer del");
       write_buffer.Dispose();
       write_buffer.Clear();
     }
@@ -137,54 +140,97 @@ namespace pulse {
     if(!drain_callback.IsEmpty()){
       TryCatch try_catch;
       
-      Handle<Value> args[1];
-      
-      if(status < 0){
-        args[0] = EXCEPTION(Error, pa_strerror(status));
-      }else{
-        args[0] = Null();
-      }
+      Handle<Value> args[0];
       
       Handle<Function> callback = drain_callback;
       
-      LOG("Stream::drain callback del");
+      //LOG("Stream::drain callback del");
       drain_callback.Dispose();
       drain_callback.Clear();
       
-      LOG("Stream::drain callback call");
-      callback->Call(handle_, 1, args);
+      //LOG("Stream::drain callback call");
+      callback->Call(handle_, 0, args);
 
       HANDLE_CAUGHT(try_catch);
     }
   }
-  
+
   static void DummyFree(void *p){}
+
+  void Stream::RequestCallback(pa_stream *s, size_t length, void *ud){
+    Stream *stm = static_cast<Stream*>(ud);
+    
+    if(stm->request(length) < length){
+      stm->drain();
+    }
+  }
+
+  size_t Stream::request(size_t length){
+    if(write_buffer.IsEmpty()){
+      return length;
+    }
+    
+    size_t end_length = Buffer::Length(write_buffer) - write_offset;
+    size_t write_length = length;
+    
+    if(!end_length){
+      return 0;
+    }
+    
+    if(write_length > end_length){
+      write_length = end_length;
+    }
+    
+    LOG("write req=%d offset=%d chunk=%d", length, write_offset, write_length);
+    
+    pa_stream_write(pa_stm, ((const char*)Buffer::Data(write_buffer)) + write_offset, write_length, DummyFree, 0, PA_SEEK_RELATIVE);
+    
+    write_offset += write_length;
+    
+    return write_length;
+  }
+  
+  void Stream::UnderflowCallback(pa_stream *s, void *ud){
+    Stream *stm = static_cast<Stream*>(ud);
+    
+    stm->underflow();
+  }
+
+  void Stream::underflow(){
+    LOG("underflow");
+    
+  }
   
   void Stream::write(Handle<Value> buffer, Handle<Value> callback){
-    LOG("Stream::write begin");
-    
     if(!write_buffer.IsEmpty()){
-      LOG("Stream::write flush");
+      //LOG("Stream::write flush");
       pa_stream_flush(pa_stm, DrainCallback, this);
     }
     
     if(callback->IsFunction()){
-      LOG("Stream::write callback add");
+      //LOG("Stream::write callback add");
       drain_callback = Persistent<Function>::New(Handle<Function>::Cast(callback));
     }
     
     if(Buffer::HasInstance(buffer)){
-      LOG("Stream::write buffer add");
+      //LOG("Stream::write buffer add");
       write_buffer = Persistent<Value>::New(buffer);
+      write_offset = 0;
       LOG("Stream::write");
-      //pa_stream_cork(pa_stm, 0, NULL, NULL);
-      pa_stream_write(pa_stm, Buffer::Data(buffer), Buffer::Length(buffer), DummyFree, 0, PA_SEEK_RELATIVE);
+      
+      if(pa_stream_is_corked(pa_stm)){
+        pa_stream_cork(pa_stm, 0, NULL, NULL);
+      }
+      
+      size_t length = pa_stream_writable_size(pa_stm);
+      if(length > 0){
+        if(request(length) < length){
+          drain();
+        }
+      }
     }else{
-      //pa_stream_cork(pa_stm, 1, NULL, NULL);
+      pa_stream_cork(pa_stm, 1, NULL, NULL);
     }
-
-    LOG("Stream::write drain");
-    pa_stream_drain(pa_stm, DrainCallback, this);
   }
   
   /* bindings */

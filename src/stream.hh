@@ -8,6 +8,7 @@ namespace pulse {
   class Stream: public ObjectWrap {
   protected:
     Context& ctx;
+    pa_sample_spec pa_ss;
     pa_stream *pa_stm;
     
     Stream(Context& context, String::Utf8Value *stream_name, const pa_sample_spec *sample_spec);
@@ -32,8 +33,17 @@ namespace pulse {
     /* write */
     Persistent<Function> drain_callback;
     Persistent<Value> write_buffer;
+    size_t write_offset;
+    
     static void DrainCallback(pa_stream *s, int st, void *ud);
-    void drain(int status);
+    void drain();
+    
+    static void RequestCallback(pa_stream *s, size_t len, void *ud);
+    size_t request(size_t len);
+
+    static void UnderflowCallback(pa_stream *s, void *ud);
+    void underflow();
+
     void write(Handle<Value> buffer, Handle<Value> callback);
     
   public:
