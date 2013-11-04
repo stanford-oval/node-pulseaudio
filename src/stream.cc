@@ -31,10 +31,15 @@ namespace pulse {
       TryCatch try_catch;
       
       Handle<Value> args[] = {
-        Number::New(stm->pa_state)
+        Number::New(stm->pa_state),
+        Undefined()
       };
+
+      if(stm->pa_state == PA_STREAM_FAILED){
+        args[1] = EXCEPTION(Error, pa_strerror(pa_context_errno(stm->ctx.pa_ctx)));
+      }
       
-      stm->state_callback->Call(stm->handle_, 1, args);
+      stm->state_callback->Call(stm->handle_, 2, args);
 
       HANDLE_CAUGHT(try_catch);
     }

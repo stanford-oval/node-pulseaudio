@@ -23,10 +23,15 @@ namespace pulse {
       TryCatch try_catch;
       
       Handle<Value> args[] = {
-        Number::New(ctx->pa_state)
+        Number::New(ctx->pa_state),
+        Undefined()
       };
+
+      if(ctx->pa_state == PA_CONTEXT_FAILED){
+        args[1] = EXCEPTION(Error, pa_strerror(pa_context_errno(ctx->pa_ctx)));
+      }
       
-      ctx->state_callback->Call(ctx->handle_, 1, args);
+      ctx->state_callback->Call(ctx->handle_, 2, args);
       
       HANDLE_CAUGHT(try_catch);
     }
