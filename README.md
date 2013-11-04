@@ -42,6 +42,12 @@ You can listen context state.
       // state == "connecting|authorizing|setting_name|ready|terminated"
     });
 
+And exceptions errors.
+
+    context.on('error', function(error){
+      //
+    });
+
 Before we can operating with context we may wait until connection will be established.
 
     context.on('connection', function(){
@@ -70,7 +76,9 @@ We can create `record` / `playback` streams.
       device: "my-preferred-device",                       // optional device name
       format: "U8|S(16|24|32)(LE|BE)|F32(BE|LE)|(A|U)LAW", // optional sample format ("S16LE" by default)
       rate: 8000|22050|44100|48000|96000|192000|N,         // optional sample rate (44100 by default)
-      channels: 1|2|N                                      // optional channels (2 (stereo) by default)
+      channels: 1|2|N,                                     // optional channels (2 (stereo) by default)
+      latency: 250000,                                     // optional latency in microseconds
+      flags: 'adjust_latency|early_requests|...'           // optional flags (see Pulseaudio docs)
     });
 
 But really streams will be initialized after context connection established.
@@ -79,6 +87,12 @@ You can monitor stream state.
 
     stream.on('state', function(state){
       // state == "creating|ready|terminated"
+    });
+
+And stream errors.
+
+    stream.on('error', function(error){
+      //
     });
 
 Before we can operating with stream we must wait until connection will be established.
