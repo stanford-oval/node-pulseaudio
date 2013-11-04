@@ -249,11 +249,12 @@ namespace pulse {
     
     JS_ASSERT(ctx);
     
-    pa_sample_spec ss = {
-      .format = PA_SAMPLE_S16LE,
-      .rate = 44100,
-      .channels = 2
-    };
+    pa_sample_spec ss;
+    
+    ss.format = PA_SAMPLE_S16LE;
+    ss.rate = 44100;
+    ss.channels = 2;
+    
     if(args[1]->IsUint32()){
       ss.format = pa_sample_format_t(args[1]->Uint32Value());
     }
