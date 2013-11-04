@@ -73,7 +73,7 @@ io_new(pa_mainloop_api *a,
   
   e = pa_xnew0(pa_io_event, 1);
 
-  LOG("io_new(fd=%u,ev=%s%s)->0x%x", fd, ev & PA_IO_EVENT_INPUT ? "in" : 0, ev & PA_IO_EVENT_OUTPUT ? "out" : "", e);
+  LOG("io_new(fd=%u,ev=%s%s)->0x%x", fd, ev & PA_IO_EVENT_INPUT ? "in" : "", ev & PA_IO_EVENT_OUTPUT ? "out" : "", e);
   
   e->a = a;
   e->fd = fd;
@@ -95,7 +95,7 @@ io_enable(pa_io_event *e,
           pa_io_event_flags_t ev){
   assert(e);
   
-  LOG("io_enable(0x%x,ev=%s%s)", e, ev & PA_IO_EVENT_INPUT ? "in" : 0, ev & PA_IO_EVENT_OUTPUT ? "out" : "");
+  LOG("io_enable(0x%x,ev=%s%s)", e, ev & PA_IO_EVENT_INPUT ? "in" : "", ev & PA_IO_EVENT_OUTPUT ? "out" : "");
   
   if(e->ev != ev){
     uv_poll_stop(&e->p);
