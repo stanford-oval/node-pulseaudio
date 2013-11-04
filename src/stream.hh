@@ -11,8 +11,11 @@ namespace pulse {
     pa_sample_spec pa_ss;
     pa_stream *pa_stm;
     
-    Stream(Context& context, String::Utf8Value *stream_name, const pa_sample_spec *sample_spec);
+    Stream(Context& context, String::Utf8Value *stream_name, const pa_sample_spec *sample_spec, pa_usec_t initial_latency);
     ~Stream();
+
+    static void BufferAttrCallback(pa_stream *s, void *ud);
+    static void LatencyCallback(pa_stream *s, void *ud);
     
     /* state */
     Persistent<Function> state_callback;
@@ -21,7 +24,7 @@ namespace pulse {
     void state_listener(Handle<Value> callback);
     
     /* connection */
-    int connect(String::Utf8Value *device_name, pa_stream_direction_t direction);
+    int connect(String::Utf8Value *device_name, pa_stream_direction_t direction, pa_stream_flags_t flags);
     void disconnect();
 
     /* read */
@@ -31,6 +34,9 @@ namespace pulse {
     void read(Handle<Value> callback);
     
     /* write */
+    pa_usec_t latency; /* latency in micro seconds */
+    pa_buffer_attr buffer_attr;
+    
     Persistent<Function> drain_callback;
     Persistent<Value> write_buffer;
     size_t write_offset;

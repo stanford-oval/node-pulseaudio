@@ -11,9 +11,15 @@ ctx.on('state', function(state){
 //ctx.on('connection', function()
 {
   var opts = {
+//    highWaterMark: 160,
     channels:1,
     rate:8000,
-    format:'s16le'
+    format:'s16le',
+//    flags:'interpolate_timing+auto_timing_update+adjust_latency',
+//    flags:'interpolate_timing+auto_timing_update',
+    flags:'adjust_latency',
+//    flags:'early_requests',
+    latency:10000
   };
 
   var rec = ctx.createRecordStream(opts),

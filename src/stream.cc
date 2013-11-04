@@ -1,20 +1,35 @@
 #include "stream.hh"
 
-#ifndef DEBUG_STREAM
+#ifdef DEBUG_STREAM
 #  undef LOG
 #  define LOG(...)
 #endif
 
 namespace pulse {
+#define LOG_BA(ba) LOG("buffer_attr{fragsize=%d,maxlength=%d,minreq=%d,prebuf=%d,tlength=%d}", ba.fragsize, ba.maxlength, ba.minreq, ba.prebuf, ba.tlength);
+  
   Stream::Stream(Context& context,
                  String::Utf8Value *stream_name,
-                 const pa_sample_spec *sample_spec): ctx(context) {
+                 const pa_sample_spec *sample_spec,
+                 pa_usec_t initial_latency):
+    ctx(context), latency(initial_latency), write_offset(0) {
+    
     ctx.Ref();
     
     pa_ss = *sample_spec;
     
     pa_stm = pa_stream_new(ctx.pa_ctx, stream_name ? **stream_name : "node-stream", &pa_ss, NULL);
+    
+    buffer_attr.fragsize = (uint32_t)-1;
+    buffer_attr.maxlength = (uint32_t)-1;
+    buffer_attr.minreq = (uint32_t)-1;
+    buffer_attr.prebuf = (uint32_t)-1;
+    buffer_attr.tlength = (uint32_t)-1;
+    
     pa_stream_set_state_callback(pa_stm, StateCallback, this);
+    
+    pa_stream_set_buffer_attr_callback(pa_stm, BufferAttrCallback, this);
+    pa_stream_set_latency_update_callback(pa_stm, LatencyCallback, this);
   }
   
   Stream::~Stream(){
@@ -56,14 +71,53 @@ namespace pulse {
     }
   }
   
-  int Stream::connect(String::Utf8Value *device_name, pa_stream_direction_t direction){
+  void Stream::BufferAttrCallback(pa_stream *s, void *ud){
+    Stream *stm = static_cast<Stream*>(ud);
+    
+    LOG_BA(stm->buffer_attr);
+  }
+
+  void Stream::LatencyCallback(pa_stream *s, void *ud){
+    Stream *stm = static_cast<Stream*>(ud);
+    
+    pa_usec_t usec;
+    int neg;
+    
+    pa_stream_get_latency(stm->pa_stm, &usec, &neg);
+    
+    LOG("latency %s%8d us", neg ? "-" : "", (int)usec);
+    
+    stm->latency = usec;
+  }
+  
+  int Stream::connect(String::Utf8Value *device_name, pa_stream_direction_t direction, pa_stream_flags_t flags){
     switch(direction){
-    case PA_STREAM_PLAYBACK:
-      return pa_stream_connect_playback(pa_stm, device_name ? **device_name : NULL, NULL, PA_STREAM_NOFLAGS, NULL, NULL);
-    case PA_STREAM_RECORD:
-      return pa_stream_connect_record(pa_stm, device_name ? **device_name : NULL, NULL, PA_STREAM_NOFLAGS);
-    case PA_STREAM_UPLOAD:
+    case PA_STREAM_PLAYBACK: {
+      if(latency){
+        buffer_attr.tlength = pa_usec_to_bytes(latency, &pa_ss);
+      }
+      
+      LOG_BA(buffer_attr);
+      
+      pa_stream_set_write_callback(pa_stm, RequestCallback, this);
+      pa_stream_set_underflow_callback(pa_stm, UnderflowCallback, this);
+      
+      return pa_stream_connect_playback(pa_stm, device_name ? **device_name : NULL, &buffer_attr, flags, NULL, NULL);
+    }
+    case PA_STREAM_RECORD: {
+      if(latency){
+        buffer_attr.fragsize = pa_usec_to_bytes(latency, &pa_ss);
+      }
+      
+      LOG_BA(buffer_attr);
+      
+      pa_stream_set_read_callback(pa_stm, ReadCallback, this);
+      
+      return pa_stream_connect_record(pa_stm, device_name ? **device_name : NULL, &buffer_attr, flags);
+    }
+    case PA_STREAM_UPLOAD: {
       return pa_stream_connect_upload(pa_stm, 0);
+    }
     case PA_STREAM_NODIRECTION:
       break;
     }
@@ -77,16 +131,21 @@ namespace pulse {
   void Stream::ReadCallback(pa_stream *s, size_t nb, void *ud){
     if(nb > 0){
       Stream *stm = static_cast<Stream*>(ud);
-
+      
       stm->data();
     }
   }
   
   void Stream::data(){
+    if(read_callback.IsEmpty()){
+      return;
+    }
+    
     const void *data = NULL;
     size_t size;
     
     pa_stream_peek(pa_stm, &data, &size);
+    LOG("Stream::read callback %d", (int)size);
     pa_stream_drop(pa_stm);
     
     Buffer *buffer = Buffer::New((const char*)data, size);
@@ -108,13 +167,11 @@ namespace pulse {
       read_callback = Persistent<Function>::New(Handle<Function>::Cast(callback));
       //pa_stream_drop(pa_stm);
       //pa_stream_flush(pa_stm, NULL, NULL);
-      pa_stream_set_read_callback(pa_stm, ReadCallback, this);
       pa_stream_cork(pa_stm, 0, NULL, NULL);
     }else{
       pa_stream_cork(pa_stm, 1, NULL, NULL);
       pa_stream_drop(pa_stm);
       //pa_stream_flush(pa_stm, NULL, NULL);
-      pa_stream_set_read_callback(pa_stm, NULL, NULL);
       read_callback.Dispose();
       read_callback.Clear();
     }
@@ -273,13 +330,35 @@ namespace pulse {
     DefineConstant(format, S24_32LE, PA_SAMPLE_S24_32LE);
     DefineConstant(format, S24_32BE, PA_SAMPLE_S24_32BE);
 
+    AddEmptyObject(cfn, flags);
+    DefineConstant(flags, noflags, PA_STREAM_NOFLAGS);
+    DefineConstant(flags, start_corked, PA_STREAM_START_CORKED);
+    DefineConstant(flags, interpolate_timing, PA_STREAM_INTERPOLATE_TIMING);
+    DefineConstant(flags, not_monotonic, PA_STREAM_NOT_MONOTONIC);
+    DefineConstant(flags, auto_timing_update, PA_STREAM_AUTO_TIMING_UPDATE);
+    DefineConstant(flags, no_remap_channels, PA_STREAM_NO_REMAP_CHANNELS);
+    DefineConstant(flags, no_remix_channels, PA_STREAM_NO_REMIX_CHANNELS);
+    DefineConstant(flags, fix_format, PA_STREAM_FIX_FORMAT);
+    DefineConstant(flags, fix_rate, PA_STREAM_FIX_RATE);
+    DefineConstant(flags, fix_channels, PA_STREAM_FIX_CHANNELS);
+    DefineConstant(flags, dont_move, PA_STREAM_DONT_MOVE);
+    DefineConstant(flags, variable_rate, PA_STREAM_VARIABLE_RATE);
+    DefineConstant(flags, peak_detect, PA_STREAM_PEAK_DETECT);
+    DefineConstant(flags, start_muted, PA_STREAM_START_MUTED);
+    DefineConstant(flags, adjust_latency, PA_STREAM_ADJUST_LATENCY);
+    DefineConstant(flags, early_requests, PA_STREAM_EARLY_REQUESTS);
+    DefineConstant(flags, dont_inhibit_auto_suspend, PA_STREAM_DONT_INHIBIT_AUTO_SUSPEND);
+    DefineConstant(flags, start_unmuted, PA_STREAM_START_UNMUTED);
+    DefineConstant(flags, fail_on_suspend, PA_STREAM_FAIL_ON_SUSPEND);
+    DefineConstant(flags, relative_volume, PA_STREAM_RELATIVE_VOLUME);
+    DefineConstant(flags, passthrough, PA_STREAM_PASSTHROUGH);
+    
     AddEmptyObject(cfn, state);
     DefineConstant(state, unconnected, PA_STREAM_UNCONNECTED);
     DefineConstant(state, creating, PA_STREAM_CREATING);
     DefineConstant(state, ready, PA_STREAM_READY);
     DefineConstant(state, failed, PA_STREAM_FAILED);
     DefineConstant(state, terminated, PA_STREAM_TERMINATED);
-    
   }
 
   Handle<Value>
@@ -288,7 +367,7 @@ namespace pulse {
 
     JS_ASSERT(args.IsConstructCall());
     
-    JS_ASSERT(args.Length() == 6);
+    JS_ASSERT(args.Length() == 7);
     JS_ASSERT(args[0]->IsObject());
     
     Context *ctx = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
@@ -311,13 +390,18 @@ namespace pulse {
       ss.channels = uint8_t(args[3]->Uint32Value());
     }
     
+    pa_usec_t latency = 0;
+    if(args[4]->IsUint32()){
+      latency = pa_usec_t(args[4]->Uint32Value());
+    }
+    
     String::Utf8Value *stream_name = NULL;
-    if(args[4]->IsString()){
-      stream_name = new String::Utf8Value(args[4]->ToString());
+    if(args[5]->IsString()){
+      stream_name = new String::Utf8Value(args[5]->ToString());
     }
     
     /* initialize instance */
-    Stream *stm = new Stream(*ctx, stream_name, &ss);
+    Stream *stm = new Stream(*ctx, stream_name, &ss, latency);
     
     if(stream_name){
       delete stream_name;
@@ -329,8 +413,8 @@ namespace pulse {
     }
     stm->Wrap(args.This());
     
-    if(args[5]->IsFunction()){
-      stm->state_listener(args[5]);
+    if(args[6]->IsFunction()){
+      stm->state_listener(args[6]);
     }
     
     return scope.Close(args.This());
@@ -340,7 +424,7 @@ namespace pulse {
   Stream::Connect(const Arguments& args){
     HandleScope scope;
 
-    JS_ASSERT(args.Length() == 2);
+    JS_ASSERT(args.Length() == 3);
     
     Stream *stm = ObjectWrap::Unwrap<Stream>(args.This());
     
@@ -350,13 +434,18 @@ namespace pulse {
     if(args[0]->IsString()){
       device_name = new String::Utf8Value(args[0]->ToString());
     }
-
+    
     pa_stream_direction_t sd = PA_STREAM_PLAYBACK;
     if(args[1]->IsUint32()){
       sd = pa_stream_direction_t(args[1]->Uint32Value());
     }
+
+    pa_stream_flags_t sf = PA_STREAM_NOFLAGS;
+    if(args[2]->IsUint32()){
+      sf = pa_stream_flags_t(args[2]->Uint32Value());
+    }
     
-    int status = stm->connect(device_name, sd);
+    int status = stm->connect(device_name, sd, sf);
     if(device_name){
       delete device_name;
     }
