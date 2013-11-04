@@ -326,22 +326,22 @@ quit(pa_mainloop_api *a,
 }
 
 pa_mainloop_api pulse::Context::mainloop_api = {
-  .userdata = NULL,
+  /*.userdata = */NULL,
   
-  .io_new = io_new,
-  .io_enable = io_enable,
-  .io_free = io_free,
-  .io_set_destroy = io_set_destroy,
+  /*.io_new = */io_new,
+  /*.io_enable = */io_enable,
+  /*.io_free = */io_free,
+  /*.io_set_destroy = */io_set_destroy,
   
-  .time_new = time_new,
-  .time_restart = time_restart,
-  .time_free = time_free,
-  .time_set_destroy = time_set_destroy,
+  /*.time_new = */time_new,
+  /*.time_restart = */time_restart,
+  /*.time_free = */time_free,
+  /*.time_set_destroy = */time_set_destroy,
   
-  .defer_new = defer_new,
-  .defer_enable = defer_enable,
-  .defer_free = defer_free,
-  .defer_set_destroy = defer_set_destroy,
+  /*.defer_new = */defer_new,
+  /*.defer_enable = */defer_enable,
+  /*.defer_free = */defer_free,
+  /*.defer_set_destroy = */defer_set_destroy,
   
-  .quit = quit
+  /*.quit = */quit
 };
