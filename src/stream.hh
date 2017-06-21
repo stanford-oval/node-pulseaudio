@@ -7,6 +7,7 @@
 namespace pulse {
   class Stream: public ObjectWrap {
   protected:
+    Isolate *isolate;
     Context& ctx;
     pa_sample_spec pa_ss;
     pa_stream *pa_stm;
@@ -18,27 +19,27 @@ namespace pulse {
     static void LatencyCallback(pa_stream *s, void *ud);
     
     /* state */
-    Persistent<Function> state_callback;
+    Global<Function> state_callback;
     pa_stream_state_t pa_state;
     static void StateCallback(pa_stream *s, void *ud);
-    void state_listener(Handle<Value> callback);
+    void state_listener(Local<Value> callback);
     
     /* connection */
     int connect(String::Utf8Value *device_name, pa_stream_direction_t direction, pa_stream_flags_t flags);
     void disconnect();
 
     /* read */
-    Persistent<Function> read_callback;
+    Global<Function> read_callback;
     static void ReadCallback(pa_stream *s, size_t nb, void *ud);
     void data();
-    void read(Handle<Value> callback);
+    void read(Local<Value> callback);
     
     /* write */
     pa_usec_t latency; /* latency in micro seconds */
     pa_buffer_attr buffer_attr;
-    
-    Persistent<Function> drain_callback;
-    Persistent<Value> write_buffer;
+
+    Global<Function> drain_callback;
+    Global<Value> write_buffer;
     size_t write_offset;
     
     static void DrainCallback(pa_stream *s, int st, void *ud);
@@ -50,23 +51,23 @@ namespace pulse {
     static void UnderflowCallback(pa_stream *s, void *ud);
     void underflow();
 
-    void write(Handle<Value> buffer, Handle<Value> callback);
+    void write(Local<Value> buffer, Local<Value> callback);
     
   public:
     static pa_mainloop_api mainloop_api;
 
     /* bindings */
     static void Init(Handle<Object> target);
-    
-    static Handle<Value> New(const Arguments& args);
-    
-    static Handle<Value> Connect(const Arguments& args);
-    static Handle<Value> Disconnect(const Arguments& args);
-    
-    static Handle<Value> Latency(const Arguments& args);
-    
-    static Handle<Value> Read(const Arguments& args);
-    static Handle<Value> Write(const Arguments& args);
+
+    static void New(const FunctionCallbackInfo<Value>& args);
+
+    static void Connect(const FunctionCallbackInfo<Value>& args);
+    static void Disconnect(const FunctionCallbackInfo<Value>& args);
+
+    static void Latency(const FunctionCallbackInfo<Value>& args);
+
+    static void Read(const FunctionCallbackInfo<Value>& args);
+    static void Write(const FunctionCallbackInfo<Value>& args);
   };
 }
 

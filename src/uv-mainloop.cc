@@ -138,14 +138,11 @@ struct pa_time_event {
 };
 
 static void
-timer_cb(uv_timer_t* t,
-         int st){
+timer_cb(uv_timer_t* t) {
   pa_time_event *e = (pa_time_event*)t->data;
   
-  if(e->cb){
-    if(st == 0){
-      e->cb(e->a, e, &e->tv, e->ud);
-    }
+  if(e->cb) {
+    e->cb(e->a, e, &e->tv, e->ud);
   }
 }
 
@@ -236,15 +233,11 @@ struct pa_defer_event {
 };
 
 static void
-defer_cb(uv_idle_t* i,
-         int st){
-  
+defer_cb(uv_idle_t* i){
   pa_defer_event *e = (pa_defer_event*)i->data;
   
   if(e->cb){
-    if(st == 0){
-      e->cb(e->a, e, e->ud);
-    }
+    e->cb(e->a, e, e->ud);
   }
 }
 

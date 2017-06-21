@@ -4,8 +4,8 @@
 
 namespace pulse {
   extern "C" void
-  init(Handle<Object> exports){
-    HandleScope scope;
+  init(Local<Object> exports){
+    HandleScope scope(exports->GetIsolate());
     
     Context::Init(exports);
     Stream::Init(exports);

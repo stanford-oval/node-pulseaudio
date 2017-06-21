@@ -1,6 +1,7 @@
 tests:=info echo
 
-all:
+all: release debug
+	@:
 
 release: configure.release build
 
