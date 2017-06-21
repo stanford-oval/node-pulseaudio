@@ -8,11 +8,12 @@
 namespace pulse {
 #define LOG_BA(ba) LOG("buffer_attr{fragsize=%d,maxlength=%d,minreq=%d,prebuf=%d,tlength=%d}", ba.fragsize, ba.maxlength, ba.minreq, ba.prebuf, ba.tlength);
   
-  Stream::Stream(Context& context,
+  Stream::Stream(Isolate *_isolate,
+                 Context& context,
                  String::Utf8Value *stream_name,
                  const pa_sample_spec *sample_spec,
                  pa_usec_t initial_latency):
-    ctx(context), latency(initial_latency), write_offset(0) {
+    isolate(_isolate), ctx(context), latency(initial_latency), write_offset(0) {
     
     ctx.Ref();
     
@@ -42,6 +43,7 @@ namespace pulse {
   
   void Stream::StateCallback(pa_stream *s, void *ud){
     Stream *stm = static_cast<Stream*>(ud);
+    HandleScope scope(stm->isolate);
     
     stm->pa_state = pa_stream_get_state(stm->pa_stm);
     
@@ -69,12 +71,14 @@ namespace pulse {
   
   void Stream::BufferAttrCallback(pa_stream *s, void *ud){
     Stream *stm = static_cast<Stream*>(ud);
+    HandleScope scope(stm->isolate);
     
     LOG_BA(stm->buffer_attr);
   }
 
   void Stream::LatencyCallback(pa_stream *s, void *ud){
     Stream *stm = static_cast<Stream*>(ud);
+    HandleScope scope(stm->isolate);
     
     pa_usec_t usec;
     int neg;
@@ -127,6 +131,7 @@ namespace pulse {
   void Stream::ReadCallback(pa_stream *s, size_t nb, void *ud){
     if(nb > 0){
       Stream *stm = static_cast<Stream*>(ud);
+      HandleScope scope(stm->isolate);
       
       stm->data();
     }
@@ -172,6 +177,7 @@ namespace pulse {
   
   void Stream::DrainCallback(pa_stream *s, int st, void *ud){
     Stream *stm = static_cast<Stream*>(ud);
+    HandleScope scope(stm->isolate);
 
     stm->drain();
   }
@@ -198,6 +204,7 @@ namespace pulse {
 
   void Stream::RequestCallback(pa_stream *s, size_t length, void *ud){
     Stream *stm = static_cast<Stream*>(ud);
+    HandleScope scope(stm->isolate);
 
     if(stm->request(length) < length){
       stm->drain();
@@ -232,6 +239,7 @@ namespace pulse {
 
   void Stream::UnderflowCallback(pa_stream *s, void *ud){
     Stream *stm = static_cast<Stream*>(ud);
+    HandleScope scope(stm->isolate);
     
     stm->underflow();
   }
@@ -385,7 +393,7 @@ namespace pulse {
     }
 
     /* initialize instance */
-    Stream *stm = new Stream(*ctx, stream_name, &ss, latency);
+    Stream *stm = new Stream(isolate, *ctx, stream_name, &ss, latency);
     
     if(stream_name){
       delete stream_name;

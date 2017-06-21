@@ -16,6 +16,7 @@ namespace pulse {
 
   void Context::StateCallback(pa_context *c, void *ud){
     Context *ctx = static_cast<Context*>(ud);
+    HandleScope scope(ctx->isolate);
     
     ctx->pa_state = pa_context_get_state(ctx->pa_ctx);
     
@@ -97,6 +98,7 @@ namespace pulse {
   template<typename pa_type_info>
   static void InfoListCallback(pa_context *c, const pa_type_info *i, int eol, void *ud){
     Pending *p = static_cast<Pending*>(ud);
+    HandleScope scope(p->isolate);
 
     if(!p->Args()){
       p->Args(1);

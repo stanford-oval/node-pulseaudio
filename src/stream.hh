@@ -12,7 +12,7 @@ namespace pulse {
     pa_sample_spec pa_ss;
     pa_stream *pa_stm;
     
-    Stream(Context& context, String::Utf8Value *stream_name, const pa_sample_spec *sample_spec, pa_usec_t initial_latency);
+    Stream(Isolate *isolate, Context& context, String::Utf8Value *stream_name, const pa_sample_spec *sample_spec, pa_usec_t initial_latency);
     ~Stream();
 
     static void BufferAttrCallback(pa_stream *s, void *ud);
