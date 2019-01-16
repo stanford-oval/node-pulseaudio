@@ -61,9 +61,8 @@ But usually it doesn't require, because any operations execute deferred.
 
 How we can retrieve `sink` / `source` lists from server.
 
-    context.[sink|source](function(list){
-      // list[0].name - name of first sink/source
-    });
+    const list = await context.[sink|source]();
+    // list[0].name - name of first sink/source
 
 And open streams.
 
@@ -73,7 +72,7 @@ Streams designed for sound i/o.
 
 We can create `record` / `playback` streams.
 
-    var stream = context.playback({
+    var stream = context.createPlaybackStream({
       stream: "my-awesome-stream",                         // optional stream name ("node-stream" by default)
       device: "my-preferred-device",                       // optional device name
       format: "U8|S(16|24|32)(LE|BE)|F32(BE|LE)|(A|U)LAW", // optional sample format ("S16LE" by default)

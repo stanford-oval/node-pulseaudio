@@ -1,11 +1,13 @@
+"use strict";
+
 var Pulse = require('..');
 
 var ctx = new Pulse({
-  client: 'test-client'
+    client: 'test-client'
 });
 
-ctx.on('state', function(state){
-  console.log('context:', state);
+ctx.on('state', (state) => {
+    console.log('context:', state);
 });
 
 //ctx.on('connection', function()
@@ -25,16 +27,16 @@ ctx.on('state', function(state){
   var rec = ctx.createRecordStream(opts),
       play = ctx.createPlaybackStream(opts);
 
-  rec.on('state', function(state){
+  rec.on('state', (state) => {
     console.log('record:', state);
   });
-  play.on('state', function(state){
+  play.on('state', (state) => {
     console.log('playback:', state);
   });
 
   rec.pipe(play);
 
-  setTimeout(function(){
+  setTimeout(() => {
     rec.end();
     play.end();
     ctx.end();

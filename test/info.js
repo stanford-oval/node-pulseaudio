@@ -1,23 +1,20 @@
-var Pulse = require('..');
+"use strict";
 
-var ctx = new Pulse();
+const Pulse = require('..');
 
-ctx.on('error', function(err){
-  console.error(err);
-});
+async function main() {
+    const ctx = new Pulse();
 
-ctx.on('state', function(state){
-  console.log('context:', state);
-});
-
-//ctx.on('connection', function()
-{
-  ctx.source(function(list){
-    console.log('source:', list);
-    ctx.source(function(list){
-      console.log('sink:', list);
-      ctx.end();
+    ctx.on('state', (state) => {
+        console.log('context:', state);
     });
-  });
+
+    let list = await ctx.source();
+    console.log('source:', list);
+
+    list = await ctx.sink();
+    console.log('sink:', list);
+
+    ctx.end();
 }
-//);
+main();
