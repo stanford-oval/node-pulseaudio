@@ -10,7 +10,7 @@ before_script: greenkeeper-lockfile-update
 after_script: greenkeeper-lockfile-upload
 install:
 - sudo apt update
-- sudo apt -y install libpulse-dev
+- sudo apt -y install libpulse-dev pulseaudio
 - yarn
 script:
 - yarn lint
