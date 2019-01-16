@@ -14,6 +14,7 @@ install:
 - sudo apt -y install libpulse-dev pulseaudio
 - yarn
 script:
+- pulseaudio --start
 - yarn lint
 - TZ="America/Los_Angeles" yarn test
 after_success: yarn run coverage
