@@ -1,16 +1,18 @@
 {
-  "name" : "pulseaudio",
+  "name" : "pulseaudio2",
   "version" : "0.0.1",
   "description": "NodeJS PulseAudio client",
   "author" : "Kayo Phoenix <kayo@illumium.org>",
-  "contributors": [],
+  "contributors": [
+    "Giovanni Campagna <gcampagn@cs.stanford.edu>"
+  ],
   "repository" : {
     "type" : "git",
-    "url" : "git@bitbucket.org:kayo/node-pulseaudio.git"
+    "url" : "https://github.com/Stanford-Mobisocial-IoT-Lab/node-pulseaudio"
   },
   "dependencies": {},
   "engines": {
-    "node": ">= 0.9.0"
+    "node": ">= 8.0.0"
   },
   "main" : "./lib/pulse",
   "scripts" : {
