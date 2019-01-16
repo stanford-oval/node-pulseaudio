@@ -16,6 +16,7 @@
         ],
         'cflags': [
           '-Wall',
+          '-Wno-deprecated-declarations',
           '<!@(pkg-config --cflags libpulse)'
         ],
         'ldflags': [

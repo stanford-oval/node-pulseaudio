@@ -23,7 +23,7 @@ namespace pulse {
   using namespace v8;
   using namespace node;
 
-#define EXCEPTION(_type_, _isolate_, _msg_) Exception::_type_(String::NewFromOneByte(_isolate_, (const uint8_t*)_msg_))
+#define EXCEPTION(_type_, _isolate_, _msg_) Exception::_type_(String::NewFromOneByte(_isolate_, (const uint8_t*)_msg_, NewStringType::kNormal).ToLocalChecked())
 #define THROW_ERROR(_type_, _isolate_, _msg_) _isolate_->ThrowException(EXCEPTION(_type_, _isolate_, _msg_))
 #define RET_ERROR(_type_, _isolate_, _msg_) { THROW_ERROR(_type_, _isolate_, _msg_); return; }
 #define THROW_SCOPE(_type_, _isolate_, _msg_) { THROW_ERROR(_type_, _isolate_, _msg_); return; }
@@ -54,14 +54,14 @@ namespace pulse {
 
 #define DefineConstant(_isolate_, target, name, constant)                          \
   (target)->DefineOwnProperty(_isolate_->GetCurrentContext(),                      \
-                String::NewFromOneByte(_isolate_, (const uint8_t*) #name),         \
+                String::NewFromOneByte(_isolate_, (const uint8_t*) #name, NewStringType::kInternalized).ToLocalChecked(),         \
                 Number::New(_isolate_, constant),                                  \
                 static_cast<PropertyAttribute>(ReadOnly|DontDelete)).FromJust()
 
 #define AddEmptyObject(_isolate_, target, name)                                    \
   Local<Object> name = Object::New(_isolate_);                                     \
   (target)->DefineOwnProperty(_isolate_->GetCurrentContext(),                      \
-                String::NewFromOneByte(_isolate_, (const uint8_t*) #name),         \
+                String::NewFromOneByte(_isolate_, (const uint8_t*) #name, NewStringType::kInternalized).ToLocalChecked(),         \
                 name,                                                              \
                 static_cast<PropertyAttribute>(ReadOnly|DontDelete)).FromJust()
   

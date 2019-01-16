@@ -288,7 +288,7 @@ namespace pulse {
     Isolate *isolate = target->GetIsolate();
     Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
     
-    tpl->SetClassName(String::NewFromOneByte(isolate, (const uint8_t*)"PulseAudioStream"));
+    tpl->SetClassName(String::NewFromOneByte(isolate, (const uint8_t*)"PulseAudioStream", NewStringType::kInternalized).ToLocalChecked());
     tpl->InstanceTemplate()->SetInternalFieldCount(1);
     
     NODE_SET_PROTOTYPE_METHOD(tpl, "connect", Connect);
@@ -300,7 +300,7 @@ namespace pulse {
 
     Local<Function> cfn = tpl->GetFunction();
     
-    target->Set(String::NewFromOneByte(isolate, (const uint8_t*) "Stream"), cfn);
+    target->Set(String::NewFromOneByte(isolate, (const uint8_t*) "Stream", NewStringType::kInternalized).ToLocalChecked(), cfn);
 
     AddEmptyObject(isolate, cfn, type);
     DefineConstant(isolate, type, playback, PA_STREAM_PLAYBACK);

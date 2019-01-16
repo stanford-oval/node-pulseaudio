@@ -3,7 +3,7 @@
 #include "stream.hh"
 
 namespace pulse {
-  extern "C" void
+  void
   init(Local<Object> exports){
     HandleScope scope(exports->GetIsolate());
     
@@ -12,4 +12,4 @@ namespace pulse {
   }
 }
 
-NODE_MODULE(pulse, pulse::init);
+NODE_MODULE(NODE_GYP_MODULE_NAME, pulse::init);
