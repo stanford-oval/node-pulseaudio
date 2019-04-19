@@ -31,14 +31,15 @@ namespace pulse {
                  Context& context,
                  String::Utf8Value *stream_name,
                  const pa_sample_spec *sample_spec,
-                 pa_usec_t initial_latency):
+                 pa_usec_t initial_latency,
+                 pa_proplist* props):
     isolate(_isolate), ctx(context), latency(initial_latency), write_offset(0) {
     
     ctx.Ref();
     
     pa_ss = *sample_spec;
     
-    pa_stm = pa_stream_new(ctx.pa_ctx, stream_name ? **stream_name : "node-stream", &pa_ss, NULL);
+    pa_stm = pa_stream_new_with_proplist(ctx.pa_ctx, stream_name ? **stream_name : "node-stream", &pa_ss, NULL, props);
     
     buffer_attr.fragsize = (uint32_t)-1;
     buffer_attr.maxlength = (uint32_t)-1;
@@ -372,14 +373,54 @@ namespace pulse {
     DefineConstant(isolate, state, terminated, PA_STREAM_TERMINATED);
   }
 
+
+  static pa_proplist*
+  maybe_build_proplist(v8::Isolate *isolate, v8::Local<v8::Object> fromjs)
+  {
+    pa_proplist *props;
+
+    if (fromjs.IsEmpty())
+        return nullptr;
+
+    props = pa_proplist_new();
+    auto prop_names = fromjs->GetOwnPropertyNames();
+    for (uint32_t i = 0; i < prop_names->Length(); i++) {
+      auto name = prop_names->Get(i);
+      if (!name->IsString()) {
+        THROW_ERROR(TypeError, isolate, "Property name must be a string.");
+        pa_proplist_free(props);
+        return nullptr;
+      }
+
+      auto value = fromjs->Get(name);
+      if (value.IsEmpty()) {
+        pa_proplist_free(props);
+        return nullptr;
+      }
+      if (!value->IsString()) {
+        THROW_ERROR(TypeError, isolate, "Property value must be a string.");
+        pa_proplist_free(props);
+        return nullptr;
+      }
+
+      String::Utf8Value c_name(isolate, name);
+      String::Utf8Value c_value(isolate, value);
+
+      pa_proplist_sets(props, *c_name, *c_value);
+    }
+
+    return props;
+  }
+
   void
   Stream::New(const FunctionCallbackInfo<Value>& args){
     Isolate *isolate = args.GetIsolate();
 
     JS_ASSERT(isolate, args.IsConstructCall());
 
-    JS_ASSERT(isolate, args.Length() == 7);
+    JS_ASSERT(isolate, args.Length() == 8);
     JS_ASSERT(isolate, args[0]->IsObject());
+    JS_ASSERT(isolate, args[6]->IsObject());
 
     Context *ctx = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
 
@@ -411,8 +452,15 @@ namespace pulse {
       stream_name = new String::Utf8Value(args[5]->ToString());
     }
 
+    pa_proplist* props;
+    props = maybe_build_proplist(isolate, args[6].As<Object>());
+
     /* initialize instance */
-    Stream *stm = new Stream(isolate, *ctx, stream_name, &ss, latency);
+    Stream *stm = new Stream(isolate, *ctx, stream_name, &ss, latency, props);
+
+    if(props) {
+      pa_proplist_free(props);
+    }
     
     if(stream_name){
       delete stream_name;
@@ -424,8 +472,8 @@ namespace pulse {
     }
     stm->Wrap(args.This());
 
-    if(args[6]->IsFunction()){
-      stm->state_listener(args[6]);
+    if(args[7]->IsFunction()){
+      stm->state_listener(args[7]);
     }
 
     args.GetReturnValue().Set(args.This());
