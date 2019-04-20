@@ -34,7 +34,7 @@ namespace pulse {
     pa_context *pa_ctx;
     Isolate *isolate;
 
-    Context(Isolate *isolate, String::Utf8Value *client_name);
+    Context(Isolate *isolate, String::Utf8Value *client_name, pa_proplist *props);
     ~Context();
     
     /* state */

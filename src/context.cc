@@ -21,8 +21,8 @@
 
 namespace pulse {
   
-  Context::Context(Isolate *isolate, String::Utf8Value *client_name) : isolate(isolate) {
-    pa_ctx = pa_context_new(&mainloop_api, client_name ? **client_name : "node-pulse");
+  Context::Context(Isolate *isolate, String::Utf8Value *client_name, pa_proplist *props) : isolate(isolate) {
+    pa_ctx = pa_context_new_with_proplist(&mainloop_api, client_name ? **client_name : "node-pulse", props);
     pa_context_set_state_callback(pa_ctx, StateCallback, this);
   }
   
@@ -207,7 +207,8 @@ namespace pulse {
 
     JS_ASSERT(isolate, args.IsConstructCall());
 
-    JS_ASSERT(isolate, args.Length() == 2);
+    JS_ASSERT(isolate, args.Length() == 3);
+    JS_ASSERT(isolate, args[1]->IsObject());
 
     String::Utf8Value *client_name = NULL;
 
@@ -215,8 +216,15 @@ namespace pulse {
       client_name = new String::Utf8Value(args[0]->ToString());
     }
 
+    pa_proplist* props;
+    props = maybe_build_proplist(isolate, args[1].As<Object>());
+
     /* initialize instance */
-    Context *ctx = new Context(isolate, client_name);
+    Context *ctx = new Context(isolate, client_name, props);
+
+    if(props) {
+      pa_proplist_free(props);
+    }
 
     if(client_name){
       delete client_name;
@@ -228,8 +236,8 @@ namespace pulse {
 
     ctx->Wrap(args.This());
 
-    if(args[1]->IsFunction()){
-      ctx->state_listener(args[1]);
+    if(args[2]->IsFunction()){
+      ctx->state_listener(args[2]);
     }
 
     args.GetReturnValue().Set(args.This());

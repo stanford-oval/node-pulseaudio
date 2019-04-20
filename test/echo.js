@@ -3,7 +3,7 @@
 var Pulse = require('..');
 
 var ctx = new Pulse({
-    client: 'test-client'
+    client: 'test-client',
 });
 
 ctx.on('state', (state) => {

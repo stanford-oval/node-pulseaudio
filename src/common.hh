@@ -84,6 +84,44 @@ namespace pulse {
                 name,                                                              \
                 static_cast<PropertyAttribute>(ReadOnly|DontDelete)).FromJust()
   
+
+  inline pa_proplist*
+  maybe_build_proplist(v8::Isolate *isolate, v8::Local<v8::Object> fromjs)
+  {
+    pa_proplist *props;
+
+    if (fromjs.IsEmpty())
+        return nullptr;
+
+    props = pa_proplist_new();
+    auto prop_names = fromjs->GetOwnPropertyNames();
+    for (uint32_t i = 0; i < prop_names->Length(); i++) {
+      auto name = prop_names->Get(i);
+      if (!name->IsString()) {
+        THROW_ERROR(TypeError, isolate, "Property name must be a string.");
+        pa_proplist_free(props);
+        return nullptr;
+      }
+
+      auto value = fromjs->Get(name);
+      if (value.IsEmpty()) {
+        pa_proplist_free(props);
+        return nullptr;
+      }
+      if (!value->IsString()) {
+        THROW_ERROR(TypeError, isolate, "Property value must be a string.");
+        pa_proplist_free(props);
+        return nullptr;
+      }
+
+      String::Utf8Value c_name(isolate, name);
+      String::Utf8Value c_value(isolate, value);
+
+      pa_proplist_sets(props, *c_name, *c_value);
+    }
+
+    return props;
+  }
 }
 
 #endif//__COMMON_HH__

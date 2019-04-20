@@ -3,7 +3,10 @@
 var Pulse = require('..');
 
 var ctx = new Pulse({
-    client: 'test-client'
+    client: 'test-client',
+    properties: {
+        'application.id': 'node-pulseaudio-test-client'
+    }
 });
 
 ctx.on('state', (state) => {
