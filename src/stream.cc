@@ -297,7 +297,7 @@ namespace pulse {
         }
       }
     }else{
-      pa_stream_cork(pa_stm, 1, NULL, NULL);
+      pa_stream_flush(pa_stm, NULL, NULL);
     }
   }
 
