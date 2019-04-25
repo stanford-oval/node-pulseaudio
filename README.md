@@ -128,9 +128,9 @@ Note that we don't need to use `pause` / `resume` methods with sound streams.
 
 This addon are available under GNU General Public License version 3.
 
-node-pulseaudio — [PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/) integration addon for [NodeJS](http://nodejs.org/).
-Copyright © 2013  Kayo Phoenix <kayo@illumium.org>
-            2017-2019 The Board of Trustees of the Leland Stanford Junior University
+node-pulseaudio — [PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/) integration addon for [NodeJS](http://nodejs.org/).  
+Copyright © 2013  Kayo Phoenix <kayo@illumium.org>  
+            2017-2019 The Board of Trustees of the Leland Stanford Junior University  
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
