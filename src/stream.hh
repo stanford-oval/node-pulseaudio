@@ -76,7 +76,7 @@ namespace pulse {
     static pa_mainloop_api mainloop_api;
 
     /* bindings */
-    static void Init(Handle<Object> target);
+    static void Init(Local<Object> target);
 
     static void New(const FunctionCallbackInfo<Value>& args);
 

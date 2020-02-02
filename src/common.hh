@@ -94,9 +94,9 @@ namespace pulse {
         return nullptr;
 
     props = pa_proplist_new();
-    auto prop_names = fromjs->GetOwnPropertyNames();
+    auto prop_names = fromjs->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
     for (uint32_t i = 0; i < prop_names->Length(); i++) {
-      auto name = prop_names->Get(i);
+      auto name = prop_names->Get(isolate->GetCurrentContext(), i).ToLocalChecked();
       if (!name->IsString()) {
         THROW_ERROR(TypeError, isolate, "Property name must be a string.");
         pa_proplist_free(props);
