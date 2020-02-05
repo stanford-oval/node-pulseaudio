@@ -17,7 +17,9 @@
   "engines": {
     "node": ">= 8.0.0"
   },
-  "os": [ "linux" ],
+  "os": [
+    "linux"
+  ],
   "main": "./lib/pulse",
   "scripts": {
     "install": "node-gyp configure build",
