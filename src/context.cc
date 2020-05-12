@@ -178,7 +178,7 @@ namespace pulse {
     NODE_SET_PROTOTYPE_METHOD(tpl, "disconnect", Disconnect);
     NODE_SET_PROTOTYPE_METHOD(tpl, "info", Info);
 
-    Local<Function> cfn = tpl->GetFunction();
+    Local<Function> cfn = tpl->GetFunction(isolate->GetCurrentContext()).ToLocalChecked();
 
     target->Set(String::NewFromOneByte(isolate, (const uint8_t*) "Context", NewStringType::kInternalized).ToLocalChecked(), cfn);
 
@@ -213,7 +213,7 @@ namespace pulse {
     String::Utf8Value *client_name = NULL;
 
     if(args[0]->IsString()){
-      client_name = new String::Utf8Value(args[0]->ToString());
+      client_name = new String::Utf8Value(isolate, args[0]->ToString(isolate->GetCurrentContext()).ToLocalChecked());
     }
 
     pa_proplist* props;
@@ -256,13 +256,13 @@ namespace pulse {
     String::Utf8Value *server_name = NULL;
 
     if(args[1]->IsString()){
-      server_name = new String::Utf8Value(args[1]->ToString());
+      server_name = new String::Utf8Value(isolate, args[1]->ToString(isolate->GetCurrentContext()).ToLocalChecked());
     }
 
     pa_context_flags flags = PA_CONTEXT_NOFLAGS;
 
     if(args[2]->IsUint32()){
-      flags = pa_context_flags(args[2]->Uint32Value());
+      flags = pa_context_flags(args[2]->Uint32Value(isolate->GetCurrentContext()).FromJust());
     }
     
     int status = ctx->connect(server_name, flags);
@@ -301,7 +301,7 @@ namespace pulse {
 
     JS_ASSERT(isolate, ctx);
 
-    ctx->info(InfoType(args[0]->Uint32Value()), args[1].As<Function>());
+    ctx->info(InfoType(args[0]->Uint32Value(isolate->GetCurrentContext()).FromJust()), args[1].As<Function>());
 
     args.GetReturnValue().SetUndefined();
   }

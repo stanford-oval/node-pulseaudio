@@ -318,7 +318,7 @@ namespace pulse {
     NODE_SET_PROTOTYPE_METHOD(tpl, "read", Read);
     NODE_SET_PROTOTYPE_METHOD(tpl, "write", Write);
 
-    Local<Function> cfn = tpl->GetFunction();
+    Local<Function> cfn = tpl->GetFunction(isolate->GetCurrentContext()).ToLocalChecked();
     
     target->Set(String::NewFromOneByte(isolate, (const uint8_t*) "Stream", NewStringType::kInternalized).ToLocalChecked(), cfn);
 
@@ -383,7 +383,7 @@ namespace pulse {
     JS_ASSERT(isolate, args[0]->IsObject());
     JS_ASSERT(isolate, args[6]->IsObject());
 
-    Context *ctx = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
+    Context *ctx = ObjectWrap::Unwrap<Context>(args[0]->ToObject(isolate->GetCurrentContext()).ToLocalChecked());
 
     JS_ASSERT(isolate, ctx);
 
@@ -394,23 +394,23 @@ namespace pulse {
     ss.channels = 2;
 
     if(args[1]->IsUint32()){
-      ss.format = pa_sample_format_t(args[1]->Uint32Value());
+      ss.format = pa_sample_format_t(args[1]->Uint32Value(isolate->GetCurrentContext()).FromJust());
     }
     if(args[2]->IsUint32()){
-      ss.rate = args[2]->Uint32Value();
+      ss.rate = args[2]->Uint32Value(isolate->GetCurrentContext()).FromJust();
     }
     if(args[3]->IsUint32()){
-      ss.channels = uint8_t(args[3]->Uint32Value());
+      ss.channels = uint8_t(args[3]->Uint32Value(isolate->GetCurrentContext()).FromJust());
     }
 
     pa_usec_t latency = 0;
     if(args[4]->IsUint32()){
-      latency = pa_usec_t(args[4]->Uint32Value());
+      latency = pa_usec_t(args[4]->Uint32Value(isolate->GetCurrentContext()).FromJust());
     }
 
     String::Utf8Value *stream_name = NULL;
     if(args[5]->IsString()){
-      stream_name = new String::Utf8Value(args[5]->ToString());
+      stream_name = new String::Utf8Value(isolate, args[5]->ToString(isolate->GetCurrentContext()).ToLocalChecked());
     }
 
     pa_proplist* props;
@@ -452,17 +452,17 @@ namespace pulse {
 
     String::Utf8Value *device_name = NULL;
     if(args[0]->IsString()){
-      device_name = new String::Utf8Value(args[0]->ToString());
+      device_name = new String::Utf8Value(isolate, args[0]->ToString(isolate->GetCurrentContext()).ToLocalChecked());
     }
 
     pa_stream_direction_t sd = PA_STREAM_PLAYBACK;
     if(args[1]->IsUint32()){
-      sd = pa_stream_direction_t(args[1]->Uint32Value());
+      sd = pa_stream_direction_t(args[1]->Uint32Value(isolate->GetCurrentContext()).FromJust());
     }
 
     pa_stream_flags_t sf = PA_STREAM_NOFLAGS;
     if(args[2]->IsUint32()){
-      sf = pa_stream_flags_t(args[2]->Uint32Value());
+      sf = pa_stream_flags_t(args[2]->Uint32Value(isolate->GetCurrentContext()).FromJust());
     }
 
     int status = stm->connect(device_name, sd, sf);
