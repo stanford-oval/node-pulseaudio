@@ -1,0 +1,6 @@
+0.3.0
+=====
+
+* Fixed compatibility with node 12.* [#5; Benjamin Schmitz].
+* Node 8.* is no longer supported, as it is EOL upstream. 
+* Updated dependencies [#3, #4].
