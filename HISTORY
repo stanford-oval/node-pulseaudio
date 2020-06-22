@@ -1,3 +1,10 @@
+0.3.1
+=====
+
+* The addon has been rewritten to use Nan, the node compatibility
+  library. This ensures compatibility with node 10, 12 and 14 [#10].
+* Updated dependencies [#8, #9, #11].
+
 0.3.0
 =====
 
