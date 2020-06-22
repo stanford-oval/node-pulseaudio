@@ -1,6 +1,6 @@
 # Overview
 
-[![Build Status](https://travis-ci.com/stanford-oval/node-pulseaudio.svg?branch=master)](https://travis-ci.com/stanford-oval/node-pulseaudio) [![Coverage Status](https://coveralls.io/repos/github/stanford-oval/node-pulseaudio/badge.svg?branch=master)](https://coveralls.io/github/stanford-oval/node-pulseaudio?branch=master) [![Dependency Status](https://david-dm.org/stanford-oval/node-pulseaudio/status.svg)](https://david-dm.org/stanford-oval/node-pulseaudio) [![Greenkeeper badge](https://badges.greenkeeper.io/stanford-oval/node-pulseaudio.svg)](https://greenkeeper.io/)
+[![Build Status](https://travis-ci.com/stanford-oval/node-pulseaudio.svg?branch=master)](https://travis-ci.com/stanford-oval/node-pulseaudio) [![Coverage Status](https://coveralls.io/repos/github/stanford-oval/node-pulseaudio/badge.svg?branch=master)](https://coveralls.io/github/stanford-oval/node-pulseaudio?branch=master) [![Dependency Status](https://david-dm.org/stanford-oval/node-pulseaudio/status.svg)](https://david-dm.org/stanford-oval/node-pulseaudio)
 
 [PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/) is an free cross-platform audio server. This addon may be usefull for creating **PulseAudio** clients on **JS**, which runs on **NodeJS**.
 You can retrieve source/sink info from server, create Record and Playback streams.
