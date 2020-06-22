@@ -28,40 +28,40 @@ namespace pulse {
     INFO_SINK_LIST,
   };
   
-  class Context: public ObjectWrap {
+  class Context: public Nan::ObjectWrap {
     friend class Stream;
-  protected:
+  private:
     pa_context *pa_ctx;
-    Isolate *isolate;
+    v8::Isolate *isolate;
 
-    Context(Isolate *isolate, String::Utf8Value *client_name, pa_proplist *props);
+    Context(v8::Isolate *isolate, const Nan::Utf8String *client_name, pa_proplist *props);
     ~Context();
     
     /* state */
-    Global<Function> state_callback;
+    Nan::Global<v8::Function> state_callback;
     pa_context_state_t pa_state;
     static void StateCallback(pa_context *c, void *ud);
-    void state_listener(Local<Value> callback);
+    void state_listener(v8::Local<v8::Value> callback);
     
     /* connection */
-    int connect(String::Utf8Value *server_name, pa_context_flags flags);
+    int connect(const Nan::Utf8String *server_name, pa_context_flags flags);
     void disconnect();
 
     static void EventCallback(pa_context *c, const char *name, pa_proplist *p, void *ud);
     
     /* introspection */
-    void info(InfoType infotype, Local<Function> callback);
+    void info(InfoType infotype, v8::Local<v8::Function> callback);
   public:
     static pa_mainloop_api mainloop_api;
 
-    static void Init(Local<Object> target);
+    static void Init(v8::Local<v8::Object> target);
 
-    static void New(const FunctionCallbackInfo<Value>& info);
+    static void New(const Nan::FunctionCallbackInfo<v8::Value>& info);
 
-    static void Connect(const FunctionCallbackInfo<Value>& info);
-    static void Disconnect(const FunctionCallbackInfo<Value>& info);
+    static void Connect(const Nan::FunctionCallbackInfo<v8::Value>& info);
+    static void Disconnect(const Nan::FunctionCallbackInfo<v8::Value>& info);
 
-    static void Info(const FunctionCallbackInfo<Value>& info);
+    static void Info(const Nan::FunctionCallbackInfo<v8::Value>& info);
   };
 }
 

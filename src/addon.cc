@@ -21,14 +21,10 @@
 #include "context.hh"
 #include "stream.hh"
 
-namespace pulse {
-  void
-  init(Local<Object> exports){
-    HandleScope scope(exports->GetIsolate());
-    
-    Context::Init(exports);
-    Stream::Init(exports);
-  }
-}
+NAN_MODULE_INIT(node_pulseaudio_init) {
+  Nan::HandleScope scope;
 
-NODE_MODULE(NODE_GYP_MODULE_NAME, pulse::init);
+  pulse::Context::Init(target);
+  pulse::Stream::Init(target);
+}
+NODE_MODULE(NODE_GYP_MODULE_NAME, node_pulseaudio_init)

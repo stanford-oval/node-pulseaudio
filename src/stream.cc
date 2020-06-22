@@ -27,9 +27,9 @@
 namespace pulse {
 #define LOG_BA(ba) LOG("buffer_attr{fragsize=%d,maxlength=%d,minreq=%d,prebuf=%d,tlength=%d}", ba.fragsize, ba.maxlength, ba.minreq, ba.prebuf, ba.tlength);
   
-  Stream::Stream(Isolate *_isolate,
+  Stream::Stream(v8::Isolate *_isolate,
                  Context& context,
-                 String::Utf8Value *stream_name,
+                 Nan::Utf8String *stream_name,
                  const pa_sample_spec *sample_spec,
                  pa_usec_t initial_latency,
                  pa_proplist* props):
@@ -53,52 +53,52 @@ namespace pulse {
     pa_stream_set_latency_update_callback(pa_stm, LatencyCallback, this);
   }
   
-  Stream::~Stream(){
-    if(pa_stm){
+  Stream::~Stream() {
+    if (pa_stm) {
       disconnect();
       pa_stream_unref(pa_stm);
     }
     ctx.Unref();
   }
   
-  void Stream::StateCallback(pa_stream *s, void *ud){
+  void Stream::StateCallback(pa_stream *s, void *ud) {
     Stream *stm = static_cast<Stream*>(ud);
-    HandleScope scope(stm->isolate);
+    Nan::HandleScope scope;
     
     stm->pa_state = pa_stream_get_state(stm->pa_stm);
     
-    if(!stm->state_callback.IsEmpty()){
-      Local<Value> args[] = {
-        Number::New(stm->isolate, stm->pa_state),
-        Undefined(stm->isolate)
+    if (!stm->state_callback.IsEmpty()) {
+      v8::Local<v8::Value> args[] = {
+        Nan::New(stm->pa_state),
+        Nan::Undefined()
       };
 
-      if(stm->pa_state == PA_STREAM_FAILED){
-        args[1] = EXCEPTION(Error, stm->isolate, pa_strerror(pa_context_errno(stm->ctx.pa_ctx)));
-      }
+      if (stm->pa_state == PA_STREAM_FAILED)
+        args[1] = Nan::Error(pa_strerror(pa_context_errno(stm->ctx.pa_ctx)));
 
-      MakeCallback(stm->isolate, stm->handle(stm->isolate), stm->state_callback.Get(stm->isolate), 2, args);
+      Nan::MakeCallback(stm->handle(), stm->state_callback.Get(stm->isolate), 2, args);
     }
   }
 
-  void Stream::state_listener(Local<Value> callback){
-    if(callback->IsFunction()){
-      state_callback = Global<Function>(isolate, Local<Function>::Cast(callback));
-    }else{
+  void Stream::state_listener(v8::Local<v8::Value> callback) {
+    if (callback->IsFunction()) {
+      state_callback = Nan::Global<v8::Function>(callback.As<v8::Function>());
+    } else {
       state_callback.Reset();
     }
   }
   
-  void Stream::BufferAttrCallback(pa_stream *s, void *ud){
+  void Stream::BufferAttrCallback(pa_stream *s, void *ud) {
+    Nan::HandleScope scope;
+#ifdef DEBUG
     Stream *stm = static_cast<Stream*>(ud);
-    HandleScope scope(stm->isolate);
-    
     LOG_BA(stm->buffer_attr);
+#endif
   }
 
-  void Stream::LatencyCallback(pa_stream *s, void *ud){
+  void Stream::LatencyCallback(pa_stream *s, void *ud) {
     Stream *stm = static_cast<Stream*>(ud);
-    HandleScope scope(stm->isolate);
+    Nan::HandleScope scope;
     
     pa_usec_t usec;
     int neg;
@@ -110,10 +110,10 @@ namespace pulse {
     stm->latency = usec;
   }
   
-  int Stream::connect(String::Utf8Value *device_name, pa_stream_direction_t direction, pa_stream_flags_t flags){
-    switch(direction){
+  int Stream::connect(Nan::Utf8String *device_name, pa_stream_direction_t direction, pa_stream_flags_t flags) {
+    switch(direction) {
     case PA_STREAM_PLAYBACK: {
-      if(latency){
+      if (latency) {
         buffer_attr.tlength = pa_usec_to_bytes(latency, &pa_ss);
       }
       
@@ -125,7 +125,7 @@ namespace pulse {
       return pa_stream_connect_playback(pa_stm, device_name ? **device_name : NULL, &buffer_attr, flags, NULL, NULL);
     }
     case PA_STREAM_RECORD: {
-      if(latency){
+      if (latency) {
         buffer_attr.fragsize = pa_usec_to_bytes(latency, &pa_ss);
       }
       
@@ -144,21 +144,21 @@ namespace pulse {
     return 0;
   }
   
-  void Stream::disconnect(){
+  void Stream::disconnect() {
     pa_stream_disconnect(pa_stm);
   }
 
-  void Stream::ReadCallback(pa_stream *s, size_t nb, void *ud){
-    if(nb > 0){
-      Stream *stm = static_cast<Stream*>(ud);
-      HandleScope scope(stm->isolate);
-      
+  void Stream::ReadCallback(pa_stream *s, size_t nb, void *ud) {
+    Stream *stm = static_cast<Stream*>(ud);
+    Nan::HandleScope scope;
+
+    if (nb > 0) {
       stm->data();
     }
   }
   
-  void Stream::data(){
-    if(read_callback.IsEmpty()){
+  void Stream::data() {
+    if (read_callback.IsEmpty()) {
       return;
     }
     
@@ -168,24 +168,24 @@ namespace pulse {
     pa_stream_peek(pa_stm, &data, &size);
     LOG("Stream::read callback %d", (int)size);
     if (data == NULL) {
-        Local<Value> args[] = { Null(isolate) };
-        MakeCallback(isolate, handle(isolate), read_callback.Get(isolate), 1, args);
+        v8::Local<v8::Value> args[] = { Null(isolate) };
+        Nan::MakeCallback(handle(), read_callback.Get(isolate), 1, args);
     } else {
-        Local<Object> buffer = Buffer::Copy(isolate, (const char*)data, size).ToLocalChecked();
-        Local<Value> args[] = { buffer };
-        MakeCallback(isolate, handle(isolate), read_callback.Get(isolate), 1, args);
+        v8::Local<v8::Object> buffer = Nan::CopyBuffer((const char*)data, size).ToLocalChecked();
+        v8::Local<v8::Value> args[] = { buffer };
+        Nan::MakeCallback(handle(), read_callback.Get(isolate), 1, args);
     }
     pa_stream_drop(pa_stm);
   }
 
-  void Stream::read(Local<Value> callback){
-    if(callback->IsFunction()){
+  void Stream::read(v8::Local<v8::Value> callback) {
+    if (callback->IsFunction()) {
       pa_stream_drop(pa_stm);
-      read_callback = Global<Function>(isolate, Local<Function>::Cast(callback));
+      read_callback = Nan::Global<v8::Function>(callback.As<v8::Function>());
       //pa_stream_drop(pa_stm);
       //pa_stream_flush(pa_stm, NULL, NULL);
       pa_stream_cork(pa_stm, 0, NULL, NULL);
-    }else{
+    } else {
       pa_stream_cork(pa_stm, 1, NULL, NULL);
       pa_stream_drop(pa_stm);
       //pa_stream_flush(pa_stm, NULL, NULL);
@@ -195,108 +195,106 @@ namespace pulse {
 
   /* write */
   
-  void Stream::DrainCallback(pa_stream *s, int st, void *ud){
+  void Stream::DrainCallback(pa_stream *s, int st, void *ud) {
     Stream *stm = static_cast<Stream*>(ud);
-    HandleScope scope(stm->isolate);
+    Nan::HandleScope scope;
 
     stm->drain();
   }
 
-  void Stream::drain(){
+  void Stream::drain() {
     LOG("Stream::drain");
 
-    if(!write_buffer.IsEmpty()){
+    if (!write_buffer.IsEmpty()) {
       //LOG("Stream::drain buffer del");
       write_buffer.Reset();
     }
     
-    if(!drain_callback.IsEmpty()){
-      Local<Function> callback = drain_callback.Get(isolate);
+    if (!drain_callback.IsEmpty()) {
+      v8::Local<v8::Function> callback = drain_callback.Get(isolate);
       
       //LOG("Stream::drain callback del");
       drain_callback.Reset();
       
-      MakeCallback(isolate, handle(isolate), callback, 0, nullptr);
+      Nan::MakeCallback(handle(), callback, 0, nullptr);
     }
   }
 
-  static void DummyFree(void *p){}
+  static void DummyFree(void *p) {}
 
-  void Stream::RequestCallback(pa_stream *s, size_t length, void *ud){
+  void Stream::RequestCallback(pa_stream *s, size_t length, void *ud) {
     Stream *stm = static_cast<Stream*>(ud);
-    HandleScope scope(stm->isolate);
+    Nan::HandleScope scope;
 
-    if(stm->request(length) < length){
+    if (stm->request(length) < length) {
       stm->drain();
     }
   }
 
-  size_t Stream::request(size_t length){
-    if(write_buffer.IsEmpty()){
+  size_t Stream::request(size_t length) {
+    if (write_buffer.IsEmpty()) {
       return length;
     }
 
-    Local<Value> local_write_buffer = write_buffer.Get(isolate);
-    size_t end_length = Buffer::Length(local_write_buffer) - write_offset;
+    v8::Local<v8::Value> local_write_buffer = write_buffer.Get(isolate);
+    size_t end_length = node::Buffer::Length(local_write_buffer) - write_offset;
     size_t write_length = length;
 
-    if(!end_length){
+    if (!end_length) {
       return 0;
     }
 
-    if(write_length > end_length){
+    if (write_length > end_length) {
       write_length = end_length;
     }
 
     LOG("write req=%d offset=%d chunk=%d", length, write_offset, write_length);
     
-    pa_stream_write(pa_stm, ((const char*)Buffer::Data(local_write_buffer)) + write_offset, write_length, DummyFree, 0, PA_SEEK_RELATIVE);
+    pa_stream_write(pa_stm, ((const char*)node::Buffer::Data(local_write_buffer)) + write_offset, write_length, DummyFree, 0, PA_SEEK_RELATIVE);
     
     write_offset += write_length;
 
     return write_length;
   }
 
-  void Stream::UnderflowCallback(pa_stream *s, void *ud){
+  void Stream::UnderflowCallback(pa_stream *s, void *ud) {
     Stream *stm = static_cast<Stream*>(ud);
-    HandleScope scope(stm->isolate);
+    Nan::HandleScope scope;
     
     stm->underflow();
   }
 
-  void Stream::underflow(){
+  void Stream::underflow() {
     LOG("underflow");
-
   }
 
-  void Stream::write(Local<Value> buffer, Local<Value> callback){
-    if(!write_buffer.IsEmpty()){
+  void Stream::write(v8::Local<v8::Value> buffer, v8::Local<v8::Value> callback) {
+    if (!write_buffer.IsEmpty()) {
       //LOG("Stream::write flush");
       pa_stream_flush(pa_stm, DrainCallback, this);
     }
 
-    if(callback->IsFunction()){
+    if (callback->IsFunction()) {
       //LOG("Stream::write callback add");
-      drain_callback = Global<Function>(isolate, Local<Function>::Cast(callback));
+      drain_callback = Nan::Global<v8::Function>(callback.As<v8::Function>());
     }
 
-    if(Buffer::HasInstance(buffer)){
+    if (node::Buffer::HasInstance(buffer)) {
       //LOG("Stream::write buffer add");
-      write_buffer = Global<Value>(isolate, buffer);
+      write_buffer = Nan::Global<v8::Value>(buffer);
       write_offset = 0;
       LOG("Stream::write");
 
-      if(pa_stream_is_corked(pa_stm)){
+      if (pa_stream_is_corked(pa_stm))
         pa_stream_cork(pa_stm, 0, NULL, NULL);
-      }
       
       size_t length = pa_stream_writable_size(pa_stm);
-      if(length > 0){
-        if(request(length) < length){
+      if (length > 0) {
+        if (request(length) < length) {
           drain();
         }
       }
-    }else{
+    } else {
       pa_stream_flush(pa_stm, NULL, NULL);
     }
   }
@@ -304,88 +302,88 @@ namespace pulse {
   /* bindings */
 
   void
-  Stream::Init(Local<Object> target) {
-    Isolate *isolate = target->GetIsolate();
-    Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
+  Stream::Init(v8::Local<v8::Object> target) {
+    v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
     
-    tpl->SetClassName(String::NewFromOneByte(isolate, (const uint8_t*)"PulseAudioStream", NewStringType::kInternalized).ToLocalChecked());
+    tpl->SetClassName(Nan::New("PulseAudioStream").ToLocalChecked());
     tpl->InstanceTemplate()->SetInternalFieldCount(1);
     
-    NODE_SET_PROTOTYPE_METHOD(tpl, "connect", Connect);
-    NODE_SET_PROTOTYPE_METHOD(tpl, "disconnect", Disconnect);
+    Nan::SetPrototypeMethod(tpl, "connect", Connect);
+    Nan::SetPrototypeMethod(tpl, "disconnect", Disconnect);
     
-    NODE_SET_PROTOTYPE_METHOD(tpl, "latency", Latency);
-    NODE_SET_PROTOTYPE_METHOD(tpl, "read", Read);
-    NODE_SET_PROTOTYPE_METHOD(tpl, "write", Write);
+    Nan::SetPrototypeMethod(tpl, "latency", Latency);
+    Nan::SetPrototypeMethod(tpl, "read", Read);
+    Nan::SetPrototypeMethod(tpl, "write", Write);
 
-    Local<Function> cfn = tpl->GetFunction(isolate->GetCurrentContext()).ToLocalChecked();
-    
-    target->Set(String::NewFromOneByte(isolate, (const uint8_t*) "Stream", NewStringType::kInternalized).ToLocalChecked(), cfn);
+    auto cfn = Nan::GetFunction(tpl).ToLocalChecked();
+    Nan::Set(target, Nan::New("Stream").ToLocalChecked(), cfn);
 
-    AddEmptyObject(isolate, cfn, type);
-    DefineConstant(isolate, type, playback, PA_STREAM_PLAYBACK);
-    DefineConstant(isolate, type, record, PA_STREAM_RECORD);
-    DefineConstant(isolate, type, upload, PA_STREAM_UPLOAD);
+    AddEmptyObject(cfn, type);
+    DefineConstant(type, playback, PA_STREAM_PLAYBACK);
+    DefineConstant(type, record, PA_STREAM_RECORD);
+    DefineConstant(type, upload, PA_STREAM_UPLOAD);
 
-    AddEmptyObject(isolate, cfn, format);
-    DefineConstant(isolate, format, U8, PA_SAMPLE_U8);
-    DefineConstant(isolate, format, S16LE, PA_SAMPLE_S16LE);
-    DefineConstant(isolate, format, S16BE, PA_SAMPLE_S16BE);
-    DefineConstant(isolate, format, F32LE, PA_SAMPLE_FLOAT32LE);
-    DefineConstant(isolate, format, F32BE, PA_SAMPLE_FLOAT32BE);
-    DefineConstant(isolate, format, ALAW, PA_SAMPLE_ALAW);
-    DefineConstant(isolate, format, ULAW, PA_SAMPLE_ULAW);
-    DefineConstant(isolate, format, S32LE, PA_SAMPLE_S32LE);
-    DefineConstant(isolate, format, S32BE, PA_SAMPLE_S32BE);
-    DefineConstant(isolate, format, S24LE, PA_SAMPLE_S24LE);
-    DefineConstant(isolate, format, S24BE, PA_SAMPLE_S24BE);
-    DefineConstant(isolate, format, S24_32LE, PA_SAMPLE_S24_32LE);
-    DefineConstant(isolate, format, S24_32BE, PA_SAMPLE_S24_32BE);
+    AddEmptyObject(cfn, format);
+    DefineConstant(format, U8, PA_SAMPLE_U8);
+    DefineConstant(format, S16LE, PA_SAMPLE_S16LE);
+    DefineConstant(format, S16BE, PA_SAMPLE_S16BE);
+    DefineConstant(format, F32LE, PA_SAMPLE_FLOAT32LE);
+    DefineConstant(format, F32BE, PA_SAMPLE_FLOAT32BE);
+    DefineConstant(format, ALAW, PA_SAMPLE_ALAW);
+    DefineConstant(format, ULAW, PA_SAMPLE_ULAW);
+    DefineConstant(format, S32LE, PA_SAMPLE_S32LE);
+    DefineConstant(format, S32BE, PA_SAMPLE_S32BE);
+    DefineConstant(format, S24LE, PA_SAMPLE_S24LE);
+    DefineConstant(format, S24BE, PA_SAMPLE_S24BE);
+    DefineConstant(format, S24_32LE, PA_SAMPLE_S24_32LE);
+    DefineConstant(format, S24_32BE, PA_SAMPLE_S24_32BE);
 
-    AddEmptyObject(isolate, cfn, flags);
-    DefineConstant(isolate, flags, noflags, PA_STREAM_NOFLAGS);
-    DefineConstant(isolate, flags, start_corked, PA_STREAM_START_CORKED);
-    DefineConstant(isolate, flags, interpolate_timing, PA_STREAM_INTERPOLATE_TIMING);
-    DefineConstant(isolate, flags, not_monotonic, PA_STREAM_NOT_MONOTONIC);
-    DefineConstant(isolate, flags, auto_timing_update, PA_STREAM_AUTO_TIMING_UPDATE);
-    DefineConstant(isolate, flags, no_remap_channels, PA_STREAM_NO_REMAP_CHANNELS);
-    DefineConstant(isolate, flags, no_remix_channels, PA_STREAM_NO_REMIX_CHANNELS);
-    DefineConstant(isolate, flags, fix_format, PA_STREAM_FIX_FORMAT);
-    DefineConstant(isolate, flags, fix_rate, PA_STREAM_FIX_RATE);
-    DefineConstant(isolate, flags, fix_channels, PA_STREAM_FIX_CHANNELS);
-    DefineConstant(isolate, flags, dont_move, PA_STREAM_DONT_MOVE);
-    DefineConstant(isolate, flags, variable_rate, PA_STREAM_VARIABLE_RATE);
-    DefineConstant(isolate, flags, peak_detect, PA_STREAM_PEAK_DETECT);
-    DefineConstant(isolate, flags, start_muted, PA_STREAM_START_MUTED);
-    DefineConstant(isolate, flags, adjust_latency, PA_STREAM_ADJUST_LATENCY);
-    DefineConstant(isolate, flags, early_requests, PA_STREAM_EARLY_REQUESTS);
-    DefineConstant(isolate, flags, dont_inhibit_auto_suspend, PA_STREAM_DONT_INHIBIT_AUTO_SUSPEND);
-    DefineConstant(isolate, flags, start_unmuted, PA_STREAM_START_UNMUTED);
-    DefineConstant(isolate, flags, fail_on_suspend, PA_STREAM_FAIL_ON_SUSPEND);
-    DefineConstant(isolate, flags, relative_volume, PA_STREAM_RELATIVE_VOLUME);
-    DefineConstant(isolate, flags, passthrough, PA_STREAM_PASSTHROUGH);
+    AddEmptyObject(cfn, flags);
+    DefineConstant(flags, noflags, PA_STREAM_NOFLAGS);
+    DefineConstant(flags, start_corked, PA_STREAM_START_CORKED);
+    DefineConstant(flags, interpolate_timing, PA_STREAM_INTERPOLATE_TIMING);
+    DefineConstant(flags, not_monotonic, PA_STREAM_NOT_MONOTONIC);
+    DefineConstant(flags, auto_timing_update, PA_STREAM_AUTO_TIMING_UPDATE);
+    DefineConstant(flags, no_remap_channels, PA_STREAM_NO_REMAP_CHANNELS);
+    DefineConstant(flags, no_remix_channels, PA_STREAM_NO_REMIX_CHANNELS);
+    DefineConstant(flags, fix_format, PA_STREAM_FIX_FORMAT);
+    DefineConstant(flags, fix_rate, PA_STREAM_FIX_RATE);
+    DefineConstant(flags, fix_channels, PA_STREAM_FIX_CHANNELS);
+    DefineConstant(flags, dont_move, PA_STREAM_DONT_MOVE);
+    DefineConstant(flags, variable_rate, PA_STREAM_VARIABLE_RATE);
+    DefineConstant(flags, peak_detect, PA_STREAM_PEAK_DETECT);
+    DefineConstant(flags, start_muted, PA_STREAM_START_MUTED);
+    DefineConstant(flags, adjust_latency, PA_STREAM_ADJUST_LATENCY);
+    DefineConstant(flags, early_requests, PA_STREAM_EARLY_REQUESTS);
+    DefineConstant(flags, dont_inhibit_auto_suspend, PA_STREAM_DONT_INHIBIT_AUTO_SUSPEND);
+    DefineConstant(flags, start_unmuted, PA_STREAM_START_UNMUTED);
+    DefineConstant(flags, fail_on_suspend, PA_STREAM_FAIL_ON_SUSPEND);
+    DefineConstant(flags, relative_volume, PA_STREAM_RELATIVE_VOLUME);
+    DefineConstant(flags, passthrough, PA_STREAM_PASSTHROUGH);
 
-    AddEmptyObject(isolate, cfn, state);
-    DefineConstant(isolate, state, unconnected, PA_STREAM_UNCONNECTED);
-    DefineConstant(isolate, state, creating, PA_STREAM_CREATING);
-    DefineConstant(isolate, state, ready, PA_STREAM_READY);
-    DefineConstant(isolate, state, failed, PA_STREAM_FAILED);
-    DefineConstant(isolate, state, terminated, PA_STREAM_TERMINATED);
+    AddEmptyObject(cfn, state);
+    DefineConstant(state, unconnected, PA_STREAM_UNCONNECTED);
+    DefineConstant(state, creating, PA_STREAM_CREATING);
+    DefineConstant(state, ready, PA_STREAM_READY);
+    DefineConstant(state, failed, PA_STREAM_FAILED);
+    DefineConstant(state, terminated, PA_STREAM_TERMINATED);
   }
 
   void
-  Stream::New(const FunctionCallbackInfo<Value>& args){
-    Isolate *isolate = args.GetIsolate();
+  Stream::New(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+    v8::Isolate *isolate = args.GetIsolate();
 
-    JS_ASSERT(isolate, args.IsConstructCall());
+    JS_ASSERT(args.IsConstructCall());
 
-    JS_ASSERT(isolate, args.Length() == 8);
-    JS_ASSERT(isolate, args[0]->IsObject());
-    JS_ASSERT(isolate, args[6]->IsObject());
+    JS_ASSERT(args.Length() == 8);
+    JS_ASSERT(args[0]->IsObject());
+    JS_ASSERT(args[6]->IsObject());
 
-    Context *ctx = ObjectWrap::Unwrap<Context>(args[0]->ToObject(isolate->GetCurrentContext()).ToLocalChecked());
-
-    JS_ASSERT(isolate, ctx);
+    v8::Local<v8::Object> ctx_object;
+    if (!Nan::To<v8::Object>(args[0]).ToLocal(&ctx_object))
+        return;
+    Context *ctx = ObjectWrap::Unwrap<Context>(ctx_object);
+    JS_ASSERT(ctx);
 
     pa_sample_spec ss;
 
@@ -393,47 +391,37 @@ namespace pulse {
     ss.rate = 44100;
     ss.channels = 2;
 
-    if(args[1]->IsUint32()){
-      ss.format = pa_sample_format_t(args[1]->Uint32Value(isolate->GetCurrentContext()).FromJust());
+    if (args[1]->IsUint32()) {
+      ss.format = pa_sample_format_t(Nan::To<uint32_t>(args[1]).FromJust());
     }
-    if(args[2]->IsUint32()){
-      ss.rate = args[2]->Uint32Value(isolate->GetCurrentContext()).FromJust();
+    if (args[2]->IsUint32()) {
+      ss.rate = Nan::To<uint32_t>(args[2]).FromJust();
     }
-    if(args[3]->IsUint32()){
-      ss.channels = uint8_t(args[3]->Uint32Value(isolate->GetCurrentContext()).FromJust());
+    if (args[3]->IsUint32()) {
+      ss.channels = uint8_t(Nan::To<uint32_t>(args[3]).FromJust());
     }
 
     pa_usec_t latency = 0;
-    if(args[4]->IsUint32()){
-      latency = pa_usec_t(args[4]->Uint32Value(isolate->GetCurrentContext()).FromJust());
+    if (args[4]->IsUint32()) {
+      latency = pa_usec_t(Nan::To<uint32_t>(args[4]).FromJust());
     }
 
-    String::Utf8Value *stream_name = NULL;
-    if(args[5]->IsString()){
-      stream_name = new String::Utf8Value(isolate, args[5]->ToString(isolate->GetCurrentContext()).ToLocalChecked());
-    }
+    std::unique_ptr<Nan::Utf8String> stream_name;
+    if (args[5]->IsString())
+      stream_name.reset(new Nan::Utf8String(args[5]));
 
-    pa_proplist* props;
-    props = maybe_build_proplist(isolate, args[6].As<Object>());
+    auto props = maybe_build_proplist(args[6].As<v8::Object>());
 
     /* initialize instance */
-    Stream *stm = new Stream(isolate, *ctx, stream_name, &ss, latency, props);
+    Stream *stm = new Stream(isolate, *ctx, stream_name.get(), &ss, latency, props.get());
 
-    if(props) {
-      pa_proplist_free(props);
-    }
-    
-    if(stream_name){
-      delete stream_name;
-    }
-
-    if(!stm->pa_stm){
+    if (!stm->pa_stm) {
       delete stm;
-      THROW_SCOPE(Error, isolate, "Unable to create stream.");
+      RET_ERROR(Error, "Unable to create stream.");
     }
     stm->Wrap(args.This());
 
-    if(args[7]->IsFunction()){
+    if (args[7]->IsFunction()) {
       stm->state_listener(args[7]);
     }
 
@@ -441,46 +429,37 @@ namespace pulse {
   }
 
   void
-  Stream::Connect(const FunctionCallbackInfo<Value>& args){
-    Isolate *isolate = args.GetIsolate();
-
-    JS_ASSERT(isolate, args.Length() == 3);
+  Stream::Connect(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+    JS_ASSERT(args.Length() == 3);
 
     Stream *stm = ObjectWrap::Unwrap<Stream>(args.This());
+    JS_ASSERT(stm);
 
-    JS_ASSERT(isolate, stm);
-
-    String::Utf8Value *device_name = NULL;
-    if(args[0]->IsString()){
-      device_name = new String::Utf8Value(isolate, args[0]->ToString(isolate->GetCurrentContext()).ToLocalChecked());
+    std::unique_ptr<Nan::Utf8String> device_name;
+    if (args[0]->IsString()) {
+      device_name.reset(new Nan::Utf8String(args[0]));
     }
 
     pa_stream_direction_t sd = PA_STREAM_PLAYBACK;
-    if(args[1]->IsUint32()){
-      sd = pa_stream_direction_t(args[1]->Uint32Value(isolate->GetCurrentContext()).FromJust());
+    if (args[1]->IsUint32()) {
+      sd = pa_stream_direction_t(Nan::To<uint32_t>(args[1]).FromJust());
     }
 
     pa_stream_flags_t sf = PA_STREAM_NOFLAGS;
-    if(args[2]->IsUint32()){
-      sf = pa_stream_flags_t(args[2]->Uint32Value(isolate->GetCurrentContext()).FromJust());
+    if (args[2]->IsUint32()) {
+      sf = pa_stream_flags_t(Nan::To<uint32_t>(args[2]).FromJust());
     }
 
-    int status = stm->connect(device_name, sd, sf);
-    if(device_name){
-      delete device_name;
-    }
-    PA_ASSERT(isolate, status);
+    int status = stm->connect(device_name.get(), sd, sf);
+    PA_ASSERT(status);
 
     args.GetReturnValue().SetUndefined();
   }
 
   void
-  Stream::Disconnect(const FunctionCallbackInfo<Value>& args){
-    Isolate *isolate = args.GetIsolate();
-    
+  Stream::Disconnect(const Nan::FunctionCallbackInfo<v8::Value>& args) {
     Stream *stm = ObjectWrap::Unwrap<Stream>(args.This());
-    
-    JS_ASSERT(isolate, stm);
+    JS_ASSERT(stm);
 
     stm->disconnect();
 
@@ -488,29 +467,23 @@ namespace pulse {
   }
 
   void
-  Stream::Latency(const FunctionCallbackInfo<Value>& args){
-    Isolate *isolate = args.GetIsolate();
-
+  Stream::Latency(const Nan::FunctionCallbackInfo<v8::Value>& args) {
     Stream *stm = ObjectWrap::Unwrap<Stream>(args.This());
-
-    JS_ASSERT(isolate, stm);
+    JS_ASSERT(stm);
 
     pa_usec_t latency;
     int negative;
 
-    PA_ASSERT(isolate, pa_stream_get_latency(stm->pa_stm, &latency, &negative));
+    PA_ASSERT(pa_stream_get_latency(stm->pa_stm, &latency, &negative));
 
-    args.GetReturnValue().Set(Number::New(isolate, latency));
+    args.GetReturnValue().Set(Nan::New(uint32_t(latency)));
   }
 
   void
-  Stream::Read(const FunctionCallbackInfo<Value>& args){
-    Isolate *isolate = args.GetIsolate();
-
+  Stream::Read(const Nan::FunctionCallbackInfo<v8::Value>& args) {
     Stream *stm = ObjectWrap::Unwrap<Stream>(args.This());
-
-    JS_ASSERT(isolate, stm);
-    JS_ASSERT(isolate, args.Length() == 1);
+    JS_ASSERT(stm);
+    JS_ASSERT(args.Length() == 1);
 
     stm->read(args[0]);
 
@@ -518,13 +491,10 @@ namespace pulse {
   }
 
   void
-  Stream::Write(const FunctionCallbackInfo<Value>& args){
-    Isolate *isolate = args.GetIsolate();
-
+  Stream::Write(const Nan::FunctionCallbackInfo<v8::Value>& args) {
     Stream *stm = ObjectWrap::Unwrap<Stream>(args.This());
-
-    JS_ASSERT(isolate, stm);
-    JS_ASSERT(isolate, args.Length() == 2);
+    JS_ASSERT(stm);
+    JS_ASSERT(args.Length() == 2);
 
     stm->write(args[0], args[1]);
 
