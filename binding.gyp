@@ -17,13 +17,17 @@
         'cflags': [
           '-Wall',
           '-Wno-deprecated-declarations',
-          '<!@(pkg-config --cflags libpulse)'
+          '<!@(pkg-config --cflags-only-other libpulse)'
         ],
         'ldflags': [
           '<!@(pkg-config  --libs-only-L --libs-only-other libpulse)'
         ],
         'libraries': [
           '<!@(pkg-config  --libs-only-l --libs-only-other libpulse)'
+        ],
+        'include_dirs': [
+          "<!(node -e \"require('nan')\")",
+          '<!@(pkg-config --cflags-only-I libpulse)'
         ]
       }]
     ]
