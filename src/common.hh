@@ -25,10 +25,8 @@ extern "C" {
 }
 
 #include <v8.h>
+#include <nan.h>
 #include <node.h>
-#include <node_version.h>
-#include <node_object_wrap.h>
-#include <node_buffer.h>
 #include <uv.h>
 #include <memory>
 
@@ -38,86 +36,82 @@ extern "C" {
 //#include <sstream>
 
 namespace pulse {
-  using namespace std;
-  using namespace v8;
-  using namespace node;
-
-#define EXCEPTION(_type_, _isolate_, _msg_) Exception::_type_(String::NewFromOneByte(_isolate_, (const uint8_t*)_msg_, NewStringType::kNormal).ToLocalChecked())
-#define THROW_ERROR(_type_, _isolate_, _msg_) _isolate_->ThrowException(EXCEPTION(_type_, _isolate_, _msg_))
-#define RET_ERROR(_type_, _isolate_, _msg_) { THROW_ERROR(_type_, _isolate_, _msg_); return; }
-#define THROW_SCOPE(_type_, _isolate_, _msg_) { THROW_ERROR(_type_, _isolate_, _msg_); return; }
+#define THROW_ERROR(_type_, _msg_) Nan::ThrowError(Nan::_type_(_msg_))
+#define RET_ERROR(_type_, _msg_) { THROW_ERROR(_type_, _msg_); return; }
 
 #ifdef DIE_ON_EXCEPTION
-#define HANDLE_CAUGHT(_isolate_, _try_)                    \
+#define HANDLE_CAUGHT(_isolate_, _try_)         \
   if(_try_.HasCaught()){                        \
-    FatalException(_isolate_, _try_);                      \
+    FatalException(_isolate_, _try_);           \
   }
 #else
-#define HANDLE_CAUGHT(_isolate_, _try_)                    \
+#define HANDLE_CAUGHT(_isolate_, _try_)         \
   if(_try_.HasCaught()){                        \
     DisplayExceptionLine(_try_);                \
   }
 #endif
 
-#define PA_ASSERT(_isolate_, action) {                       \
+#define PA_ASSERT(action) {                       \
     int __status = (action);                      \
     if(__status < 0){                             \
-      THROW_SCOPE(Error, _isolate_, pa_strerror(__status));  \
+      RET_ERROR(Error, pa_strerror(__status));    \
     }                                             \
   }
 
-#define JS_ASSERT(_isolate_, condition)                                   \
+#define JS_ASSERT(condition)                                   \
   if(!(condition)){                                            \
-    THROW_SCOPE(Error, _isolate_, "Assertion failed: `" #condition "`!"); \
+    RET_ERROR(Error, "Assertion failed: `" #condition "`!");   \
   }
 
-#define DefineConstant(_isolate_, target, name, constant)                          \
-  (target)->DefineOwnProperty(_isolate_->GetCurrentContext(),                      \
-                String::NewFromOneByte(_isolate_, (const uint8_t*) #name, NewStringType::kInternalized).ToLocalChecked(),         \
-                Number::New(_isolate_, constant),                                  \
-                static_cast<PropertyAttribute>(ReadOnly|DontDelete)).FromJust()
+#define DefineConstant(target, name, constant)                                         \
+  Nan::DefineOwnProperty(target, Nan::New(#name).ToLocalChecked(), Nan::New(constant), \
+                         static_cast<v8::PropertyAttribute>(v8::ReadOnly|v8::DontDelete))
 
-#define AddEmptyObject(_isolate_, target, name)                                    \
-  Local<Object> name = Object::New(_isolate_);                                     \
-  (target)->DefineOwnProperty(_isolate_->GetCurrentContext(),                      \
-                String::NewFromOneByte(_isolate_, (const uint8_t*) #name, NewStringType::kInternalized).ToLocalChecked(),         \
-                name,                                                              \
-                static_cast<PropertyAttribute>(ReadOnly|DontDelete)).FromJust()
-  
+#define AddEmptyObject(target, name)                                               \
+  v8::Local<v8::Object> name = Nan::New<v8::Object>();                                     \
+  Nan::DefineOwnProperty(target, Nan::New(#name).ToLocalChecked(), name,           \
+                         static_cast<v8::PropertyAttribute>(v8::ReadOnly|v8::DontDelete))
 
-  inline pa_proplist*
-  maybe_build_proplist(v8::Isolate *isolate, v8::Local<v8::Object> fromjs)
+  struct proplist_deleter {
+    void operator()(pa_proplist* ptr) {
+      pa_proplist_free(ptr);
+    }
+  };
+
+  inline std::unique_ptr<pa_proplist, proplist_deleter>
+  maybe_build_proplist(v8::Local<v8::Object> fromjs)
   {
-    pa_proplist *props;
+    std::unique_ptr<pa_proplist, proplist_deleter> props;
 
     if (fromjs.IsEmpty())
         return nullptr;
 
-    props = pa_proplist_new();
-    auto prop_names = fromjs->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
+    props.reset(pa_proplist_new());
+    v8::Local<v8::Array> prop_names;
+    if (!Nan::GetOwnPropertyNames(fromjs).ToLocal(&prop_names))
+      return nullptr;
+
     for (uint32_t i = 0; i < prop_names->Length(); i++) {
-      auto name = prop_names->Get(isolate->GetCurrentContext(), i).ToLocalChecked();
+      v8::Local<v8::Value> name, value;
+
+      if (!Nan::Get(prop_names, i).ToLocal(&name))
+        return nullptr;
       if (!name->IsString()) {
-        THROW_ERROR(TypeError, isolate, "Property name must be a string.");
-        pa_proplist_free(props);
+        THROW_ERROR(TypeError, "Property name must be a string.");
         return nullptr;
       }
 
-      auto value = fromjs->Get(name);
-      if (value.IsEmpty()) {
-        pa_proplist_free(props);
+      if (!Nan::Get(prop_names, i).ToLocal(&value))
         return nullptr;
-      }
       if (!value->IsString()) {
-        THROW_ERROR(TypeError, isolate, "Property value must be a string.");
-        pa_proplist_free(props);
+        THROW_ERROR(TypeError, "Property value must be a string.");
         return nullptr;
       }
 
-      String::Utf8Value c_name(isolate, name);
-      String::Utf8Value c_value(isolate, value);
+      Nan::Utf8String c_name(name);
+      Nan::Utf8String c_value(value);
 
-      pa_proplist_sets(props, *c_name, *c_value);
+      pa_proplist_sets(props.get(), *c_name, *c_value);
     }
 
     return props;

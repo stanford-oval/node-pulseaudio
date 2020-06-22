@@ -22,6 +22,7 @@ async function main() {
             channels: fmt.channels,
             rate: fmt.sampleRate,
             format: (fmt.signed ? 'S' : 'U') + fmt.bitDepth + fmt.endianness,
+            latency: 500000 // in us
         };
         const play = ctx.createPlaybackStream(opts);
 
