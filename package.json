@@ -2,7 +2,7 @@
   "name": "pulseaudio2",
   "version": "0.3.1",
   "description": "NodeJS PulseAudio client",
-  "license": "GPL-3.0+",
+  "license": "LGPL-3.0+",
   "author": "Kayo Phoenix <kayo@illumium.org>",
   "contributors": [
     "Giovanni Campagna <gcampagn@cs.stanford.edu>"
