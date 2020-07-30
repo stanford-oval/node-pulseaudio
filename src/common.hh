@@ -101,7 +101,7 @@ namespace pulse {
         return nullptr;
       }
 
-      if (!Nan::Get(prop_names, i).ToLocal(&value))
+      if (!Nan::Get(fromjs, name).ToLocal(&value))
         return nullptr;
       if (!value->IsString()) {
         THROW_ERROR(TypeError, "Property value must be a string.");
