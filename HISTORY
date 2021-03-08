@@ -1,3 +1,11 @@
+0.4.0
+=====
+
+* The minimum supported version of node is now 12.
+* Added APIs to retrieve and set volume and muted status of sources and
+  sinks [#29].
+* Updated dependencies [#17, #20, #21, #23, #24, #25, #26, #27, #28]
+
 0.3.3
 =====
 
