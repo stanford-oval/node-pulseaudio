@@ -164,11 +164,72 @@ namespace pulse {
     switch(infotype) {
     case INFO_SERVER:
       pa_context_get_server_info(pa_ctx, ServerInfoCallback, p);
+      break;
     case INFO_SOURCE_LIST:
       pa_context_get_source_info_list(pa_ctx, InfoListCallback<pa_source_info>, p);
       break;
     case INFO_SINK_LIST:
       pa_context_get_sink_info_list(pa_ctx, InfoListCallback<pa_sink_info>, p);
+      break;
+    }
+  }
+
+  static void ContextSuccessCallback(pa_context *c, int success, void *ud) {
+    Pending *p = static_cast<Pending*>(ud);
+    Nan::HandleScope scope;
+
+    if (!p->Args()) {
+      p->Args(1);
+      p->argv[0] = Nan::Undefined();
+    }
+
+    p->Return();
+  }
+
+  void Context::set_mute(InfoType infotype, uint32_t index, uint32_t mute, v8::Local<v8::Function> callback) {
+    Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
+    switch(infotype) {
+    case INFO_SOURCE_LIST:
+      pa_context_set_source_mute_by_index(pa_ctx, index, mute, ContextSuccessCallback, p);
+      break;
+    case INFO_SINK_LIST:
+      pa_context_set_sink_mute_by_index(pa_ctx, index, mute, ContextSuccessCallback, p);
+      break;
+    }
+  }
+
+  void Context::set_mute(InfoType infotype, const char* name, uint32_t mute, v8::Local<v8::Function> callback) {
+    Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
+    switch(infotype) {
+    case INFO_SOURCE_LIST:
+      pa_context_set_source_mute_by_name(pa_ctx, name, mute, ContextSuccessCallback, p);
+      break;
+    case INFO_SINK_LIST:
+      pa_context_set_sink_mute_by_name(pa_ctx, name, mute, ContextSuccessCallback, p);
+      break;
+    }
+  }
+
+  void Context::set_volume(InfoType infotype, uint32_t index, const pa_cvolume *volume, v8::Local<v8::Function> callback) {
+    Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
+    switch(infotype) {
+    case INFO_SOURCE_LIST:
+      pa_context_set_source_volume_by_index(pa_ctx, index, volume, ContextSuccessCallback, p);
+      break;
+    case INFO_SINK_LIST:
+      pa_context_set_sink_volume_by_index(pa_ctx, index, volume, ContextSuccessCallback, p);
+      break;
+    }
+  }
+
+  void Context::set_volume(InfoType infotype, const char* name, const pa_cvolume *volume, v8::Local<v8::Function> callback) {
+    Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
+    switch(infotype) {
+    case INFO_SOURCE_LIST:
+      pa_context_set_source_volume_by_name(pa_ctx, name, volume, ContextSuccessCallback, p);
+      break;
+    case INFO_SINK_LIST:
+      pa_context_set_sink_volume_by_name(pa_ctx, name, volume, ContextSuccessCallback, p);
       break;
     }
   }
@@ -187,6 +248,8 @@ namespace pulse {
     Nan::SetPrototypeMethod(tpl, "connect", Connect);
     Nan::SetPrototypeMethod(tpl, "disconnect", Disconnect);
     Nan::SetPrototypeMethod(tpl, "info", Info);
+    Nan::SetPrototypeMethod(tpl, "set_volume", SetVolume);
+    Nan::SetPrototypeMethod(tpl, "set_mute", SetMute);
 
     auto cfn = Nan::GetFunction(tpl).ToLocalChecked();
     Nan::Set(target, Nan::New("Context").ToLocalChecked(), cfn);
@@ -278,7 +341,7 @@ namespace pulse {
 
   void
   Context::Info(const Nan::FunctionCallbackInfo<v8::Value>& args) {
-    JS_ASSERT(args.Length() > 1);
+    JS_ASSERT(args.Length() >= 2);
     JS_ASSERT(args[0]->IsUint32());
     JS_ASSERT(args[1]->IsFunction());
 
@@ -286,6 +349,54 @@ namespace pulse {
     JS_ASSERT(ctx);
 
     ctx->info(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), args[1].As<v8::Function>());
+
+    args.GetReturnValue().SetUndefined();
+  }
+
+  void
+  Context::SetMute(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+    JS_ASSERT(args.Length() >= 4);
+    JS_ASSERT(args[0]->IsUint32());
+    JS_ASSERT(args[1]->IsUint32() || args[1]->IsString());
+    JS_ASSERT(args[2]->IsUint32());
+    JS_ASSERT(args[3]->IsFunction());
+
+    Context *ctx = ObjectWrap::Unwrap<Context>(args.This());
+    JS_ASSERT(ctx);
+
+    if (args[1]->IsUint32())
+        ctx->set_mute(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), Nan::To<uint32_t>(args[1]).FromJust(), Nan::To<uint32_t>(args[2]).FromJust(), args[3].As<v8::Function>());
+    else
+        ctx->set_mute(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), *Nan::Utf8String(args[1]), Nan::To<uint32_t>(args[2]).FromJust(), args[3].As<v8::Function>());
+
+    args.GetReturnValue().SetUndefined();
+  }
+
+  void
+  Context::SetVolume(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+    JS_ASSERT(args.Length() >= 4);
+    JS_ASSERT(args[0]->IsUint32());
+    JS_ASSERT(args[1]->IsUint32() || args[1]->IsString());
+    JS_ASSERT(args[2]->IsArray());
+    auto volume = args[2].As<v8::Array>();
+    for (uint32_t i = 0; i < volume->Length(); i++)
+        JS_ASSERT(Nan::Get(volume, i).ToLocalChecked()->IsUint32());
+
+    JS_ASSERT(args[3]->IsFunction());
+
+    Context *ctx = ObjectWrap::Unwrap<Context>(args.This());
+    JS_ASSERT(ctx);
+
+    pa_cvolume cvolume;
+    memset(&cvolume, 0, sizeof(cvolume));
+    cvolume.channels = std::min(volume->Length(), PA_CHANNELS_MAX);
+    for (uint32_t i = 0; i < cvolume.channels; i++)
+        cvolume.values[i] = Nan::To<uint32_t>(Nan::Get(volume, i).ToLocalChecked()).FromJust();
+
+    if (args[0]->IsUint32())
+        ctx->set_volume(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), Nan::To<uint32_t>(args[1]).FromJust(), &cvolume, args[3].As<v8::Function>());
+    else
+        ctx->set_volume(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), *Nan::Utf8String(args[1]), &cvolume, args[3].As<v8::Function>());
 
     args.GetReturnValue().SetUndefined();
   }
