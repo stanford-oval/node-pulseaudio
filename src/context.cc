@@ -126,6 +126,12 @@ namespace pulse {
       Nan::Set(info, Nan::New("latency").ToLocalChecked(), Nan::New(uint32_t(i->latency)));
       Nan::Set(info, Nan::New("driver").ToLocalChecked(), Nan::New(i->driver).ToLocalChecked());
 
+      auto volume = Nan::New<v8::Array>();
+      for (auto ch = 0; ch < i->volume.channels; ch++) {
+        Nan::Set(volume, ch, Nan::New(i->volume.values[ch]));
+      }
+      Nan::Set(info, Nan::New("volume").ToLocalChecked(), volume);
+
       v8::Local<v8::Array> list = p->argv[0].Get(p->isolate).As<v8::Array>();
       Nan::Set(list, list->Length(), info);
     }
