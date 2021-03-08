@@ -24,6 +24,7 @@
 
 namespace pulse {
   enum InfoType {
+    INFO_SERVER,
     INFO_SOURCE_LIST,
     INFO_SINK_LIST,
   };
@@ -51,6 +52,13 @@ namespace pulse {
     
     /* introspection */
     void info(InfoType infotype, v8::Local<v8::Function> callback);
+
+    /* volume control */
+    void set_mute(InfoType infotype, uint32_t index, uint32_t mute, v8::Local<v8::Function> callback);
+    void set_mute(InfoType infotype, const char* name, uint32_t mute, v8::Local<v8::Function> callback);
+    void set_volume(InfoType infotype, uint32_t index, const pa_cvolume* volume, v8::Local<v8::Function> callback);
+    void set_volume(InfoType infotype, const char* name, const pa_cvolume* volume, v8::Local<v8::Function> callback);
+
   public:
     static pa_mainloop_api mainloop_api;
 
@@ -62,6 +70,9 @@ namespace pulse {
     static void Disconnect(const Nan::FunctionCallbackInfo<v8::Value>& info);
 
     static void Info(const Nan::FunctionCallbackInfo<v8::Value>& info);
+
+    static void SetVolume(const Nan::FunctionCallbackInfo<v8::Value>& info);
+    static void SetMute(const Nan::FunctionCallbackInfo<v8::Value>& info);
   };
 }
 

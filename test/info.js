@@ -9,6 +9,9 @@ async function main() {
         console.log('context:', state);
     });
 
+    const server = await ctx.info();
+    console.log('server:', server);
+
     let list = await ctx.source();
     console.log('source:', list);
 
