@@ -131,9 +131,33 @@ namespace pulse {
     }
   }
 
+  static void ServerInfoCallback(pa_context *c, const pa_server_info *i, void *ud) {
+    Pending *p = static_cast<Pending*>(ud);
+    Nan::HandleScope scope;
+
+    if (!p->Args()) {
+      p->Args(1);
+      p->argv[0] = Nan::Global<v8::Value>(Nan::New<v8::Object>());
+    }
+
+    auto info = p->argv[0].Get(p->isolate).As<v8::Object>();
+
+    Nan::Set(info, Nan::New("user_name").ToLocalChecked(), Nan::New(i->user_name).ToLocalChecked());
+    Nan::Set(info, Nan::New("host_name").ToLocalChecked(), Nan::New(i->host_name).ToLocalChecked());
+    Nan::Set(info, Nan::New("server_version").ToLocalChecked(), Nan::New(i->server_version).ToLocalChecked());
+    Nan::Set(info, Nan::New("server_name").ToLocalChecked(), Nan::New(i->server_name).ToLocalChecked());
+    Nan::Set(info, Nan::New("default_sink_name").ToLocalChecked(), Nan::New(i->default_sink_name).ToLocalChecked());
+    Nan::Set(info, Nan::New("default_source_name").ToLocalChecked(), Nan::New(i->default_source_name).ToLocalChecked());
+    Nan::Set(info, Nan::New("cookie").ToLocalChecked(), Nan::New(i->cookie));
+
+    p->Return();
+  }
+
   void Context::info(InfoType infotype, v8::Local<v8::Function> callback) {
     Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
     switch(infotype) {
+    case INFO_SERVER:
+      pa_context_get_server_info(pa_ctx, ServerInfoCallback, p);
     case INFO_SOURCE_LIST:
       pa_context_get_source_info_list(pa_ctx, InfoListCallback<pa_source_info>, p);
       break;
@@ -176,6 +200,7 @@ namespace pulse {
     DefineConstant(state, terminated, PA_CONTEXT_TERMINATED);
 
     AddEmptyObject(cfn, info);
+    DefineConstant(info, server, INFO_SERVER);
     DefineConstant(info, source_list, INFO_SOURCE_LIST);
     DefineConstant(info, sink_list, INFO_SINK_LIST);
   }

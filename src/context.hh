@@ -24,6 +24,7 @@
 
 namespace pulse {
   enum InfoType {
+    INFO_SERVER,
     INFO_SOURCE_LIST,
     INFO_SINK_LIST,
   };
