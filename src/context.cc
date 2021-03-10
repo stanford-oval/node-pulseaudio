@@ -393,7 +393,7 @@ namespace pulse {
     for (uint32_t i = 0; i < cvolume.channels; i++)
         cvolume.values[i] = Nan::To<uint32_t>(Nan::Get(volume, i).ToLocalChecked()).FromJust();
 
-    if (args[0]->IsUint32())
+    if (args[1]->IsUint32())
         ctx->set_volume(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), Nan::To<uint32_t>(args[1]).FromJust(), &cvolume, args[3].As<v8::Function>());
     else
         ctx->set_volume(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), *Nan::Utf8String(args[1]), &cvolume, args[3].As<v8::Function>());
