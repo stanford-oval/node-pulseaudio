@@ -175,7 +175,9 @@ namespace pulse {
         v8::Local<v8::Value> args[] = { buffer };
         Nan::MakeCallback(handle(), read_callback.Get(isolate), 1, args);
     }
-    pa_stream_drop(pa_stm);
+    if (!(data == NULL && size == 0)) {
+        pa_stream_drop(pa_stm);
+    }
   }
 
   void Stream::read(v8::Local<v8::Value> callback) {
