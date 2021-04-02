@@ -159,6 +159,32 @@ namespace pulse {
     p->Return();
   }
 
+  template<typename pa_module_info>
+  static void ModuleListCallback(pa_context *c, const pa_module_info *i, int eol, void *ud) {
+    Pending *p = static_cast<Pending*>(ud);
+    Nan::HandleScope scope;
+
+    if (!p->Args()) {
+      p->Args(1);
+      p->argv[0] = Nan::Global<v8::Value>(Nan::New<v8::Array>());
+    }
+
+    if (eol) {
+      p->Return();
+      delete p;
+    } else {
+      auto info = Nan::New<v8::Object>();
+
+      Nan::Set(info, Nan::New("name").ToLocalChecked(), Nan::New(i->name).ToLocalChecked());
+      Nan::Set(info, Nan::New("index").ToLocalChecked(), Nan::New(i->index));
+      Nan::Set(info, Nan::New("argument").ToLocalChecked(), Nan::New(i->argument != NULL ? i->argument : "").ToLocalChecked());
+      Nan::Set(info, Nan::New("n_used").ToLocalChecked(), Nan::New(uint32_t(i->n_used == PA_INVALID_INDEX ? 0 : i->n_used)));
+
+      v8::Local<v8::Array> list = p->argv[0].Get(p->isolate).As<v8::Array>();
+      Nan::Set(list, list->Length(), info);
+    }
+  }
+
   void Context::info(InfoType infotype, v8::Local<v8::Function> callback) {
     Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
     switch(infotype) {
@@ -170,6 +196,9 @@ namespace pulse {
       break;
     case INFO_SINK_LIST:
       pa_context_get_sink_info_list(pa_ctx, InfoListCallback<pa_sink_info>, p);
+      break;
+    case INFO_MODULE_LIST:
+      pa_context_get_module_info_list(pa_ctx, ModuleListCallback<pa_module_info>, p);
       break;
     }
   }
@@ -234,6 +263,28 @@ namespace pulse {
     }
   }
 
+  static void ContextIndexCallback(pa_context *c, unsigned int index, void *ud) {
+    Pending *p = static_cast<Pending*>(ud);
+    Nan::HandleScope scope;
+
+    if (!p->Args()) {
+      p->Args(1);
+      p->argv[0] = Nan::New(uint32_t(index));
+    }
+
+    p->Return();
+  }
+
+  void Context::load_module(const char* name, const char* argument, v8::Local<v8::Function> callback) {
+    Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
+    pa_context_load_module(pa_ctx, name, argument, ContextIndexCallback, p);
+  }
+
+  void Context::unload_module(unsigned int index, v8::Local<v8::Function> callback) {
+    Pending *p = new Pending(callback->GetIsolate(), handle(), callback);
+    pa_context_unload_module(pa_ctx, index, ContextSuccessCallback, p);
+  }
+
   /* bindings */
 
   void
@@ -250,6 +301,8 @@ namespace pulse {
     Nan::SetPrototypeMethod(tpl, "info", Info);
     Nan::SetPrototypeMethod(tpl, "set_volume", SetVolume);
     Nan::SetPrototypeMethod(tpl, "set_mute", SetMute);
+    Nan::SetPrototypeMethod(tpl, "load_module", LoadModule);
+    Nan::SetPrototypeMethod(tpl, "unload_module", UnloadModule);
 
     auto cfn = Nan::GetFunction(tpl).ToLocalChecked();
     Nan::Set(target, Nan::New("Context").ToLocalChecked(), cfn);
@@ -272,6 +325,7 @@ namespace pulse {
     DefineConstant(info, server, INFO_SERVER);
     DefineConstant(info, source_list, INFO_SOURCE_LIST);
     DefineConstant(info, sink_list, INFO_SINK_LIST);
+    DefineConstant(info, module_list, INFO_MODULE_LIST);
   }
 
   void
@@ -397,6 +451,35 @@ namespace pulse {
         ctx->set_volume(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), Nan::To<uint32_t>(args[1]).FromJust(), &cvolume, args[3].As<v8::Function>());
     else
         ctx->set_volume(InfoType(Nan::To<uint32_t>(args[0]).FromJust()), *Nan::Utf8String(args[1]), &cvolume, args[3].As<v8::Function>());
+
+    args.GetReturnValue().SetUndefined();
+  }
+
+  void
+  Context::LoadModule(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+    JS_ASSERT(args.Length() == 3);
+    JS_ASSERT(args[0]->IsString());
+    JS_ASSERT(args[1]->IsString());
+    JS_ASSERT(args[2]->IsFunction());
+
+    Context *ctx = ObjectWrap::Unwrap<Context>(args.This());
+    JS_ASSERT(ctx);
+
+    ctx->load_module(*Nan::Utf8String(args[0]), *Nan::Utf8String(args[1]), args[2].As<v8::Function>());
+
+    args.GetReturnValue().SetUndefined();
+  }
+
+  void
+  Context::UnloadModule(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+    JS_ASSERT(args.Length() == 2);
+    JS_ASSERT(args[0]->IsUint32());
+    JS_ASSERT(args[1]->IsFunction());
+
+    Context *ctx = ObjectWrap::Unwrap<Context>(args.This());
+    JS_ASSERT(ctx);
+
+    ctx->unload_module(Nan::To<uint32_t>(args[0]).FromJust(), args[1].As<v8::Function>());
 
     args.GetReturnValue().SetUndefined();
   }

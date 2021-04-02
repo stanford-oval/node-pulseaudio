@@ -27,6 +27,7 @@ namespace pulse {
     INFO_SERVER,
     INFO_SOURCE_LIST,
     INFO_SINK_LIST,
+    INFO_MODULE_LIST
   };
   
   class Context: public Nan::ObjectWrap {
@@ -59,6 +60,10 @@ namespace pulse {
     void set_volume(InfoType infotype, uint32_t index, const pa_cvolume* volume, v8::Local<v8::Function> callback);
     void set_volume(InfoType infotype, const char* name, const pa_cvolume* volume, v8::Local<v8::Function> callback);
 
+    /* module */
+    void load_module(const char* name, const char* argument, v8::Local<v8::Function> callback);
+    void unload_module(uint32_t index, v8::Local<v8::Function> callback);
+
   public:
     static pa_mainloop_api mainloop_api;
 
@@ -73,6 +78,9 @@ namespace pulse {
 
     static void SetVolume(const Nan::FunctionCallbackInfo<v8::Value>& info);
     static void SetMute(const Nan::FunctionCallbackInfo<v8::Value>& info);
+
+    static void LoadModule(const Nan::FunctionCallbackInfo<v8::Value>& info);
+    static void UnloadModule(const Nan::FunctionCallbackInfo<v8::Value>& info);
   };
 }
 
