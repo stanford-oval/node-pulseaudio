@@ -1,3 +1,10 @@
+0.5.0
+=====
+
+* Added APIs to list/load/unload modules [#34].
+* Fixed memory leak while recording [#32, #33].
+* Updated dependencies [#33].
+
 0.4.1
 =====
 
