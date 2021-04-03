@@ -20,4 +20,6 @@ async function main() {
 
     ctx.end();
 }
-main();
+module.exports = main;
+if (!module.parent)
+    main();

@@ -1,7 +1,6 @@
 "use strict";
 
 const Pulse = require('..');
-const fs = require('fs');
 
 async function main() {
     const ctx = new Pulse({
@@ -13,7 +12,7 @@ async function main() {
     oModulesList = await ctx.modules();
     for (let i = 0; i < oModulesList.length; i++) {
         const m = oModulesList[i];
-        if (m.name == "module-null-sink") {
+        if (m.name === "module-null-sink") {
             console.log("remove module-null-sink");
             await ctx.unloadModule(m.index);
         }
@@ -21,10 +20,8 @@ async function main() {
 
     oModulesList = await ctx.modules();
     oModulesList.forEach((m) => {
-        if (m.name == "module-null-sink") {
-            console.log("failed to remove module-null-sink");
-            process.exit(1);
-        }
+        if (m.name === "module-null-sink")
+            throw new Error("failed to remove module-null-sink");
     });
 
     let result = await ctx.loadModule("module-null-sink");
@@ -32,13 +29,12 @@ async function main() {
 
     oModulesList = await ctx.modules();
     oModulesList.forEach((m) => {
-        if (m.name == "module-null-sink") {
+        if (m.name === "module-null-sink")
             console.log("module found");
-            return true;
-        }
     });
 
     ctx.end();
 }
-
-main();
+module.exports = main;
+if (!module.parent)
+    main();
