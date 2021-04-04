@@ -1,45 +1,46 @@
 "use strict";
 
-var Pulse = require('..');
+const Pulse = require('..');
 
-var ctx = new Pulse({
-    client: 'test-client',
-});
+async function main() {
+    const ctx = new Pulse({
+        client: 'test-client',
+    });
 
-ctx.on('state', (state) => {
-    console.log('context:', state);
-});
+    ctx.on('state', (state) => {
+        console.log('context:', state);
+    });
 
-//ctx.on('connection', function()
-{
-  var opts = {
-//    highWaterMark: 160,
-    channels:1,
-    rate:8000,
-    format:'s16le',
-//    flags:'interpolate_timing+auto_timing_update+adjust_latency',
-//    flags:'interpolate_timing+auto_timing_update',
-    flags:'adjust_latency',
-//    flags:'early_requests',
-    latency:10000
-  };
+    const opts = {
+        //    highWaterMark: 160,
+        channels:1,
+        rate:8000,
+        format:'s16le',
+        //    flags:'interpolate_timing+auto_timing_update+adjust_latency',
+        //    flags:'interpolate_timing+auto_timing_update',
+        flags:'adjust_latency',
+        //    flags:'early_requests',
+        latency:10000
+    };
 
-  var rec = ctx.createRecordStream(opts),
+    const rec = ctx.createRecordStream(opts),
       play = ctx.createPlaybackStream(opts);
 
-  rec.on('state', (state) => {
+    rec.on('state', (state) => {
     console.log('record:', state);
-  });
-  play.on('state', (state) => {
+    });
+    play.on('state', (state) => {
     console.log('playback:', state);
-  });
+    });
 
-  rec.pipe(play);
+    rec.pipe(play);
 
-  setTimeout(() => {
+    await new Promise((resolve) => { setTimeout(resolve, 5000); });
+
     rec.end();
     play.end();
     ctx.end();
-  }, 5000);
 }
-//);
+module.exports = main;
+if (!module.parent)
+    main();

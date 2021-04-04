@@ -2,7 +2,16 @@
 
 process.on('unhandledRejection', (up) => { throw up; });
 
-require('./echo');
-require('./info');
-require('./volume');
-require('./module');
+async function seq(array) {
+    for (const mod of array) {
+        console.log(`Running ${mod}`);
+        await require(mod)();
+    }
+}
+
+seq([
+('./echo'),
+('./info'),
+('./volume'),
+('./module')
+]);

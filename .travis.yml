@@ -11,11 +11,11 @@ env:
 install:
 - sudo apt update
 - sudo apt -y install libpulse-dev pulseaudio
-- yarn
+- npm ci
 script:
 - pulseaudio --start
-- yarn lint
-- TZ="America/Los_Angeles" yarn test
-after_success: yarn run coverage
+- npm run lint
+- TZ="America/Los_Angeles" npm run test
+after_success: npm run coverage
 notifications:
   webhooks: https://coveralls.io/webhook
