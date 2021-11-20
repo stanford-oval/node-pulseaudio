@@ -1,3 +1,9 @@
+0.5.1
+=====
+
+* Added TypeScript typing file.
+* Updated dependencies.
+
 0.5.0
 =====
 
@@ -40,5 +46,5 @@
 =====
 
 * Fixed compatibility with node 12.* [#5; Benjamin Schmitz].
-* Node 8.* is no longer supported, as it is EOL upstream. 
+* Node 8.* is no longer supported, as it is EOL upstream.
 * Updated dependencies [#3, #4].
