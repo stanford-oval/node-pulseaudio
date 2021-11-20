@@ -19,7 +19,7 @@
 import * as events from 'events';
 import * as stream from 'stream';
 
-class PulseAudio extends events.EventEmitter {
+declare class PulseAudio extends events.EventEmitter {
     constructor(options ?: {
         client ?: string;
         server ?: string;
@@ -52,7 +52,7 @@ class PulseAudio extends events.EventEmitter {
     end() : void;
 }
 
-namespace PulseAudio {
+declare namespace PulseAudio {
     export interface SourceOrSinkInfo {
         name : string;
         index : number;
