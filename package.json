@@ -21,7 +21,8 @@
   "os": [
     "linux"
   ],
-  "main": "./lib/pulse",
+  "main": "./lib/pulse.js",
+  "types": "./lib/pulse.d.ts",
   "scripts": {
     "install": "node-gyp configure build",
     "lint": "eslint ./lib",
