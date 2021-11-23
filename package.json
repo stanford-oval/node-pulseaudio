@@ -1,6 +1,6 @@
 {
   "name": "pulseaudio2",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "NodeJS PulseAudio client",
   "license": "LGPL-3.0+",
   "author": "Kayo Phoenix <kayo@illumium.org>",
