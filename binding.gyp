@@ -13,17 +13,20 @@
     'cflags': [
       '-Wall',
       '-Wno-deprecated-declarations',
-      '<!@(pkg-config --cflags-only-other libpulse)'
+      '<!@(pkg-config --cflags libpulse)'
     ],
-    'ldflags': [
-      '<!@(pkg-config  --libs-only-L --libs-only-other libpulse)'
-    ],
+    'xcode_settings': {
+      'OTHER_CFLAGS': [
+        '-Wall',
+        '-Wno-deprecated-declarations',
+        '<!@(pkg-config --cflags libpulse)'
+      ]
+    },
     'libraries': [
-      '<!@(pkg-config  --libs-only-l --libs-only-other libpulse)'
+      '<!@(pkg-config  --libs libpulse)'
     ],
     'include_dirs': [
       "<!(node -e \"require('nan')\")",
-      '<!@(pkg-config --cflags-only-I libpulse)'
     ]
   }]
 }
